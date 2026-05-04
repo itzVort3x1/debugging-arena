@@ -1,0 +1,9 @@
+{
+  "slug": "memory-leak",
+  "title": "Chat Room Memory Leak",
+  "difficulty": "easy",
+  "tags": ["node", "events", "memory"],
+  "timeLimit": 1200,
+  "stack": ["Node.js", "EventEmitter"],
+  "issueContext": "Memory grows unboundedly under churn — Node prints MaxListenersExceededWarning"
+}

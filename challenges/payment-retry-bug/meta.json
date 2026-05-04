@@ -1,0 +1,9 @@
+{
+  "slug": "payment-retry-bug",
+  "title": "Stripe Webhook Double-Charges",
+  "difficulty": "hard",
+  "tags": ["node", "stripe", "idempotency", "webhooks"],
+  "timeLimit": 2400,
+  "stack": ["Node.js", "Stripe", "Postgres"],
+  "issueContext": "Customers reporting being charged 2-3x for the same order"
+}

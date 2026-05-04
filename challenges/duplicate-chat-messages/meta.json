@@ -1,0 +1,9 @@
+{
+  "slug": "duplicate-chat-messages",
+  "title": "Duplicate Chat Messages",
+  "difficulty": "medium",
+  "tags": ["node", "redis", "websocket", "memory"],
+  "timeLimit": 1800,
+  "stack": ["Node.js", "Redis", "Socket.IO"],
+  "issueContext": "Production: users see chat messages multiple times after reconnecting"
+}

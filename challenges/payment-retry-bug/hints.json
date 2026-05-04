@@ -1,0 +1,28 @@
+{
+  "hints": [
+    {
+      "level": 1,
+      "title": "Why is Stripe retrying?",
+      "content": "Stripe webhooks are at-least-once delivery. Even with a successful 200 response, the same event can arrive again. Your handler must be safe to call multiple times with the same input.",
+      "penaltyPoints": 5
+    },
+    {
+      "level": 2,
+      "title": "What's already on the PaymentDb interface?",
+      "content": "Look at `db.isEventProcessed(eventId)` and `db.markEventProcessed(eventId)`. They exist for exactly this case. The current handler ignores them.",
+      "penaltyPoints": 10
+    },
+    {
+      "level": 3,
+      "title": "Idempotency pattern",
+      "content": "Before applying any side effect, check if the event id has already been processed. If yes, return early. After applying the charge, mark the event as processed so the next retry sees it.",
+      "penaltyPoints": 15
+    },
+    {
+      "level": 4,
+      "title": "Solution outline",
+      "content": "```ts\nif (event.type !== 'payment_intent.succeeded') return;\nif (await db.isEventProcessed(event.id)) return;\nconst intent = event.data.object;\nawait db.applyCharge(intent.id, intent.amount, intent.currency);\nawait db.markEventProcessed(event.id);\n```\nIn production you'd wrap the charge + mark in a transaction; for this test the sequential calls are sufficient.",
+      "penaltyPoints": 25
+    }
+  ]
+}
