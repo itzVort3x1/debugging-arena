@@ -73,6 +73,12 @@ export interface ArenaState {
   setActiveTab: (path: string | null) => void;
   setFileContent: (path: string, content: string) => void;
   markAllSaved: () => void;
+  /**
+   * Clear dirty marks for paths whose current content still equals the snapshot.
+   * Use this after a successful autosave PATCH — paths the user re-edited
+   * during the save are correctly left dirty so the next save catches them.
+   */
+  markSavedSnapshot: (snapshot: Record<string, string>) => void;
 
   appendTestOutput: (line: TestOutputLine) => void;
   clearTestOutput: () => void;
@@ -176,6 +182,14 @@ export const useArenaStore = create<ArenaState>()(
     markAllSaved() {
       set((s) => {
         s.dirtyFiles = {};
+      });
+    },
+
+    markSavedSnapshot(snapshot) {
+      set((s) => {
+        for (const [path, content] of Object.entries(snapshot)) {
+          if (s.files[path] === content) delete s.dirtyFiles[path];
+        }
       });
     },
 
