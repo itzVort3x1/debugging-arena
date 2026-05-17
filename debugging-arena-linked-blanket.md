@@ -162,6 +162,7 @@ model Postmortem {
 ```
 
 Key decisions:
+
 - `challengeSlug` is a string reference — no Challenge DB table; filesystem is canonical
 - `fileState` is a `Json` column: `Record<filename, content>` — simple autosave
 - `TestRun.output` stored as text — terminal replay on session resume
@@ -173,28 +174,42 @@ Key decisions:
 ```typescript
 // challenges/_schema.ts
 interface ChallengeMeta {
-  slug: string; title: string; difficulty: 'easy'|'medium'|'hard';
-  tags: string[]; timeLimit: number; stack: string[]; issueContext: string;
+    slug: string;
+    title: string;
+    difficulty: "easy" | "medium" | "hard";
+    tags: string[];
+    timeLimit: number;
+    stack: string[];
+    issueContext: string;
 }
 interface ChallengeFile {
-  path: string; content: string; readOnly: boolean; language: string;
+    path: string;
+    content: string;
+    readOnly: boolean;
+    language: string;
 }
 interface HintLevel {
-  level: 1|2|3|4; title: string; content: string; penaltyPoints: number;
+    level: 1 | 2 | 3 | 4;
+    title: string;
+    content: string;
+    penaltyPoints: number;
 }
 interface ChallengeDefinition {
-  meta: ChallengeMeta; description: string;
-  files: ChallengeFile[]; hints: HintLevel[]; testFiles: string[];
+    meta: ChallengeMeta;
+    description: string;
+    files: ChallengeFile[];
+    hints: HintLevel[];
+    testFiles: string[];
 }
 ```
 
 ### Three Sample Challenges
 
-| Challenge | Root Cause | Fix |
-|-----------|-----------|-----|
-| `duplicate-chat-messages` | Redis subscriber created on every `socket.on('connection')`, never cleaned up on disconnect — stacks duplicate subs | Maintain `Map<socketId, subscriber>`, unsubscribe + quit on disconnect |
-| `memory-leak` | `EventEmitter.on('message', handler)` added per user join in `room-manager.ts`, never removed on leave | Call `emitter.removeListener('message', handler)` in leave/disconnect path |
-| `payment-retry-bug` | Webhook handler has no idempotency check — Stripe retries cause duplicate charges | Check `processed_events` table for `paymentIntentId` before executing charge; insert on first execution |
+| Challenge                 | Root Cause                                                                                                          | Fix                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `duplicate-chat-messages` | Redis subscriber created on every `socket.on('connection')`, never cleaned up on disconnect — stacks duplicate subs | Maintain `Map<socketId, subscriber>`, unsubscribe + quit on disconnect                                  |
+| `memory-leak`             | `EventEmitter.on('message', handler)` added per user join in `room-manager.ts`, never removed on leave              | Call `emitter.removeListener('message', handler)` in leave/disconnect path                              |
+| `payment-retry-bug`       | Webhook handler has no idempotency check — Stripe retries cause duplicate charges                                   | Check `processed_events` table for `paymentIntentId` before executing charge; insert on first execution |
 
 Hints are **pre-written** in `hints.json` (4 levels each) — no Claude call per hint, only for postmortems.
 
@@ -213,6 +228,7 @@ ArenaLayout (flex, full viewport, bg-gray-950)
 ```
 
 **Monaco critical details:**
+
 - Use `@monaco-editor/react` with `dynamic(() => import(...), { ssr: false })`
 - One Monaco model per file path (preserves cursor/undo per file on tab switch)
 - `theme: 'vs-dark'`, read-only files rendered with `opacity-60` tab
@@ -246,17 +262,17 @@ POST /api/sessions/[sessionId]/run-tests
 
 ## API Routes
 
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| GET | `/api/challenges` | public | List all (meta only) |
-| GET | `/api/challenges/[slug]` | required | Full definition (hints show titles only) |
-| POST | `/api/sessions` | required | Create/resume DebugSession |
-| GET | `/api/sessions/[sessionId]` | required | Session + file state |
-| PATCH | `/api/sessions/[sessionId]` | required | Autosave fileState |
-| POST | `/api/sessions/[sessionId]/run-tests` | required | SSE stream of Jest output |
-| POST | `/api/sessions/[sessionId]/hint` | required | Request next hint level |
-| POST | `/api/sessions/[sessionId]/submit` | required | Final submit + score |
-| POST | `/api/postmortem/[sessionId]` | required | Claude postmortem (SSE stream) |
+| Method | Path                                  | Auth     | Purpose                                  |
+| ------ | ------------------------------------- | -------- | ---------------------------------------- |
+| GET    | `/api/challenges`                     | public   | List all (meta only)                     |
+| GET    | `/api/challenges/[slug]`              | required | Full definition (hints show titles only) |
+| POST   | `/api/sessions`                       | required | Create/resume DebugSession               |
+| GET    | `/api/sessions/[sessionId]`           | required | Session + file state                     |
+| PATCH  | `/api/sessions/[sessionId]`           | required | Autosave fileState                       |
+| POST   | `/api/sessions/[sessionId]/run-tests` | required | SSE stream of Jest output                |
+| POST   | `/api/sessions/[sessionId]/hint`      | required | Request next hint level                  |
+| POST   | `/api/sessions/[sessionId]/submit`    | required | Final submit + score                     |
+| POST   | `/api/postmortem/[sessionId]`         | required | Claude postmortem (SSE stream)           |
 
 ---
 
@@ -291,18 +307,30 @@ Be specific to the actual code change. Professional tone, no emojis.
 
 ```json
 {
-  "dependencies": {
-    "next": "14.x", "react": "^18", "@prisma/client": "^5",
-    "next-auth": "^4", "@anthropic-ai/sdk": "^0.92.0",
-    "@monaco-editor/react": "^4.7.0", "zustand": "^5", "zod": "^3",
-    "react-markdown": "^9", "ansi-to-html": "^0.7",
-    "clsx": "^2", "tailwind-merge": "^2", "lucide-react": "^0.400",
-    "bcryptjs": "^2", "immer": "^10"
-  },
-  "devDependencies": {
-    "prisma": "^5", "jest": "^29", "ts-jest": "^29",
-    "monaco-editor-webpack-plugin": "*", "tailwindcss": "^3"
-  }
+    "dependencies": {
+        "next": "14.x",
+        "react": "^18",
+        "@prisma/client": "^5",
+        "next-auth": "^4",
+        "@anthropic-ai/sdk": "^0.92.0",
+        "@monaco-editor/react": "^4.7.0",
+        "zustand": "^5",
+        "zod": "^3",
+        "react-markdown": "^9",
+        "ansi-to-html": "^0.7",
+        "clsx": "^2",
+        "tailwind-merge": "^2",
+        "lucide-react": "^0.400",
+        "bcryptjs": "^2",
+        "immer": "^10"
+    },
+    "devDependencies": {
+        "prisma": "^5",
+        "jest": "^29",
+        "ts-jest": "^29",
+        "monaco-editor-webpack-plugin": "*",
+        "tailwindcss": "^3"
+    }
 }
 ```
 
@@ -312,19 +340,19 @@ Be specific to the actual code change. Professional tone, no emojis.
 
 ```typescript
 interface ArenaState {
-  files: Record<string, string>;          // path → current content
-  originalFiles: Record<string, string>;  // path → original (for diff)
-  openTabs: string[];
-  activeTab: string | null;
-  dirtyFiles: Set<string>;
-  testOutput: TestOutputLine[];
-  testStatus: 'idle'|'running'|'passed'|'failed'|'timeout';
-  lastRunStats: { pass: number; fail: number; duration: number } | null;
-  hintsRevealed: number;                  // 0-4
-  hints: HintLevel[];
-  sessionId: string | null;
-  challenge: ChallengeDefinition | null;
-  // Actions: openFile, closeTab, setFileContent, appendTestOutput, revealNextHint, ...
+    files: Record<string, string>; // path → current content
+    originalFiles: Record<string, string>; // path → original (for diff)
+    openTabs: string[];
+    activeTab: string | null;
+    dirtyFiles: Set<string>;
+    testOutput: TestOutputLine[];
+    testStatus: "idle" | "running" | "passed" | "failed" | "timeout";
+    lastRunStats: { pass: number; fail: number; duration: number } | null;
+    hintsRevealed: number; // 0-4
+    hints: HintLevel[];
+    sessionId: string | null;
+    challenge: ChallengeDefinition | null;
+    // Actions: openFile, closeTab, setFileContent, appendTestOutput, revealNextHint, ...
 }
 ```
 
@@ -355,29 +383,35 @@ ANTHROPIC_API_KEY="sk-ant-..."
 ## Implementation Phases
 
 ### Phase 1 — Scaffolding (~3h)
+
 1. `npx create-next-app@14 . --typescript --tailwind --app` (in `D:\Debugging Arena`)
 2. Install all dependencies
 3. Configure `tailwind.config.ts` (dark VSCode theme tokens)
 4. Configure `next.config.ts` (Monaco webpack plugin)
 5. Write `prisma/schema.prisma`, run `npx prisma migrate dev --name init`
 6. Create all directory stubs
-**Checkpoint:** `npm run dev` starts, Prisma Studio shows empty tables
+   **Checkpoint:** `npm run dev` starts, Prisma Studio shows empty tables
 
 ### Phase 2 — Challenge Data Layer (~4h)
+
 1. Write `challenges/_schema.ts` types
 2. Write all 3 challenges: meta.json, description.md, hints.json, broken source files, test files
 3. Write `lib/challenges/loader.ts` (fs.readdirSync, parse each challenge dir)
 4. Write `lib/challenges/registry.ts` (Map<slug, ChallengeDefinition>)
 5. Write `GET /api/challenges` and `GET /api/challenges/[slug]`
-**Checkpoint:** API returns 3 challenges with correct metadata
+   **Checkpoint:** API returns 3 challenges with correct metadata
+
+claude --resume 1e21afab-c87a-4ef0-b572-14ebc53c9f8e
 
 ### Phase 3 — Auth + Session (~3h)
+
 1. Write `lib/auth.ts` (NextAuth credentials provider)
 2. Write login/register pages
 3. Write `POST /api/sessions` (create/resume), `GET`, `PATCH` (autosave)
-**Checkpoint:** Register → login → create session → fileState populated
+   **Checkpoint:** Register → login → create session → fileState populated
 
 ### Phase 4 — Browser IDE (~10h) ← Largest phase
+
 1. `store/arena.ts` — Zustand store
 2. `hooks/useFileEditor.ts` — Monaco model management
 3. `hooks/useSession.ts` — load + autosave
@@ -387,34 +421,38 @@ ANTHROPIC_API_KEY="sk-ant-..."
 7. `HintPanel.tsx`, `TerminalPanel.tsx`, `StatusBar.tsx`, `TopBar.tsx`
 8. `ArenaLayout.tsx` — assemble all panels
 9. `app/challenges/[slug]/arena/page.tsx`
-**Checkpoint:** Navigate to /challenges/duplicate-chat-messages/arena → IDE renders with files, Monaco, problem panel
+   **Checkpoint:** Navigate to /challenges/duplicate-chat-messages/arena → IDE renders with files, Monaco, problem panel
 
 ### Phase 5 — Test Runner + SSE (~6h)
+
 1. `lib/runner/sandbox.ts` — subprocess spawn with timeout
 2. `lib/runner/output-parser.ts` — Jest --json parsing
 3. `lib/runner/test-runner.ts` — temp files + jest orchestration
 4. `POST /api/sessions/[sessionId]/run-tests/route.ts` — SSE handler
 5. `hooks/useTestRunner.ts` — EventSource consumer
 6. Wire RunButton → useTestRunner → TerminalPanel
-**Checkpoint:** Click Run Tests → Jest output streams in real-time → FAIL on unfixed code
+   **Checkpoint:** Click Run Tests → Jest output streams in real-time → FAIL on unfixed code
 
 ### Phase 6 — Hints + Submit + Scoring (~4h)
+
 1. `POST /api/sessions/[sessionId]/hint/route.ts`
 2. `hooks/useHints.ts`, wire `HintPanel`
 3. `lib/scoring.ts`
 4. `POST /api/sessions/[sessionId]/submit/route.ts`
 5. Submit modal + score display screen
-**Checkpoint:** Fix bug → submit → score with breakdown appears
+   **Checkpoint:** Fix bug → submit → score with breakdown appears
 
 ### Phase 7 — Postmortem + Dashboard (~4h)
+
 1. `lib/postmortem.ts` — Claude prompt + stream
 2. `POST /api/postmortem/[sessionId]/route.ts`
 3. `PostmortemReport.tsx` — streaming markdown render
 4. `app/dashboard/page.tsx` — session history
 5. `app/page.tsx` — challenge list with ChallengeCards
-**Checkpoint:** Complete challenge → postmortem streams in → dashboard shows score
+   **Checkpoint:** Complete challenge → postmortem streams in → dashboard shows score
 
 ### Phase 8 — Polish (~4h)
+
 - Loading skeletons, error boundaries
 - Session resume (navigate away + back → state restored)
 - Windows path edge cases (`path.posix` vs `path.win32`)
@@ -440,10 +478,10 @@ ANTHROPIC_API_KEY="sk-ant-..."
 
 ## Critical Files
 
-| File | Why Critical |
-|------|-------------|
-| `prisma/schema.prisma` | All API routes depend on correct models being generated first |
-| `src/lib/challenges/loader.ts` | Bridge between file-based challenges and runtime — every route depends on it |
-| `src/lib/runner/test-runner.ts` | Core value prop — temp file write, Jest spawn, SSE stream, result persist |
-| `src/components/ide/ArenaLayout.tsx` | Root of entire IDE UI — assembles all panels |
-| `src/store/arena.ts` | Single source of truth for all IDE state — every IDE component reads/writes here |
+| File                                 | Why Critical                                                                     |
+| ------------------------------------ | -------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`               | All API routes depend on correct models being generated first                    |
+| `src/lib/challenges/loader.ts`       | Bridge between file-based challenges and runtime — every route depends on it     |
+| `src/lib/runner/test-runner.ts`      | Core value prop — temp file write, Jest spawn, SSE stream, result persist        |
+| `src/components/ide/ArenaLayout.tsx` | Root of entire IDE UI — assembles all panels                                     |
+| `src/store/arena.ts`                 | Single source of truth for all IDE state — every IDE component reads/writes here |
