@@ -1,10 +1,25 @@
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import { TerminalCarousel } from "@/components/TerminalCarousel";
+import { SignOutButton } from "@/components/SignOutButton";
 
-export default function HomePage() {
+interface SessionUser {
+  name: string | null;
+  email: string | null;
+}
+
+export default async function HomePage() {
   const challenges = getAllChallengeMeta();
+  const session = await getServerSession(authOptions);
+  const user: SessionUser | null = session?.user
+    ? {
+        name: session.user.name ?? null,
+        email: session.user.email ?? null,
+      }
+    : null;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-vscode-bg text-vscode-fg">
@@ -23,12 +38,12 @@ export default function HomePage() {
       />
 
       <div className="relative mx-auto max-w-6xl px-6">
-        <TopNav />
-        <Hero />
+        <TopNav user={user} />
+        <Hero user={user} />
         <HowItWorks />
-        <FeaturedChallenges challenges={challenges} />
-        <ComparisonStrip />
-        <FinalCTA />
+        <FeaturedChallenges challenges={challenges} authed={!!user} />
+        {!user && <ComparisonStrip />}
+        {!user && <FinalCTA />}
         <Footer />
       </div>
     </div>
@@ -37,29 +52,78 @@ export default function HomePage() {
 
 // ---------------------- nav ----------------------
 
-function TopNav() {
+function TopNav({ user }: { user: SessionUser | null }) {
   return (
     <header className="flex h-16 items-center justify-between">
-      <div className="flex items-center gap-2 text-sm font-semibold text-vscode-fg">
+      <Link
+        href="/"
+        className="flex items-center gap-2 text-sm font-semibold text-vscode-fg"
+      >
         <BugIcon />
         Debugging Arena
-      </div>
+      </Link>
       <nav className="flex items-center gap-2 text-sm">
-        <Link
-          href="/login"
-          className="rounded-md border border-transparent px-3.5 py-1.5 text-sm font-medium text-vscode-fg-muted transition-all hover:border-vscode-border hover:bg-vscode-bg-elevated hover:text-vscode-fg"
-        >
-          Sign in
-        </Link>
-        <Link
-          href="/register"
-          className="group relative inline-flex items-center gap-1.5 rounded-md bg-vscode-accent px-4 py-1.5 text-sm font-semibold text-white shadow-md shadow-vscode-accent/30 ring-1 ring-inset ring-white/10 transition-all hover:bg-vscode-accent-hover hover:shadow-lg hover:shadow-vscode-accent/50"
-        >
-          Get started
-          <NavArrowIcon />
-        </Link>
+        {user ? <AuthedNav user={user} /> : <AnonNav />}
       </nav>
     </header>
+  );
+}
+
+function AnonNav() {
+  return (
+    <>
+      <Link
+        href="/login"
+        className="rounded-md border border-transparent px-3.5 py-1.5 text-sm font-medium text-vscode-fg-muted transition-all hover:border-vscode-border hover:bg-vscode-bg-elevated hover:text-vscode-fg"
+      >
+        Sign in
+      </Link>
+      <Link
+        href="/register"
+        className="group relative inline-flex items-center gap-1.5 rounded-md bg-vscode-accent px-4 py-1.5 text-sm font-semibold text-white shadow-md shadow-vscode-accent/30 ring-1 ring-inset ring-white/10 transition-all hover:bg-vscode-accent-hover hover:shadow-lg hover:shadow-vscode-accent/50"
+      >
+        Get started
+        <NavArrowIcon />
+      </Link>
+    </>
+  );
+}
+
+function AuthedNav({ user }: { user: SessionUser }) {
+  const label = user.name ?? user.email ?? "Account";
+  return (
+    <>
+      <Link
+        href="#challenges"
+        className="hidden rounded-md border border-transparent px-3.5 py-1.5 text-sm font-medium text-vscode-fg-muted transition-all hover:border-vscode-border hover:bg-vscode-bg-elevated hover:text-vscode-fg sm:inline-flex"
+      >
+        Challenges
+      </Link>
+      <div className="inline-flex items-center gap-2 rounded-md border border-vscode-border bg-vscode-bg-elevated px-3 py-1.5">
+        <Avatar label={label} />
+        <span className="hidden max-w-[160px] truncate text-xs text-vscode-fg sm:inline">
+          {label}
+        </span>
+      </div>
+      <SignOutButton />
+    </>
+  );
+}
+
+function Avatar({ label }: { label: string }) {
+  const initials = label
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("");
+  return (
+    <span
+      aria-hidden
+      className="flex h-5 w-5 items-center justify-center rounded-full bg-vscode-accent/20 text-[10px] font-semibold text-vscode-accent"
+    >
+      {initials || "?"}
+    </span>
   );
 }
 
@@ -84,45 +148,81 @@ function NavArrowIcon() {
 
 // ---------------------- hero ----------------------
 
-function Hero() {
+function Hero({ user }: { user: SessionUser | null }) {
+  const firstName = user?.name?.split(" ")[0] ?? null;
+
   return (
     <section className="grid gap-10 py-16 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:py-24">
       <div>
-        <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-vscode-border bg-vscode-bg-elevated px-3 py-1 text-xs text-vscode-fg-muted">
-          <span className="h-2 w-2 rounded-full bg-vscode-success" />
-          Now in beta · 3 challenges live
-        </div>
+        {user ? (
+          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-vscode-accent/30 bg-vscode-accent/10 px-3 py-1 text-xs text-vscode-accent">
+            <span className="h-2 w-2 rounded-full bg-vscode-accent" />
+            Signed in
+          </div>
+        ) : (
+          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-vscode-border bg-vscode-bg-elevated px-3 py-1 text-xs text-vscode-fg-muted">
+            <span className="h-2 w-2 rounded-full bg-vscode-success" />
+            Now in beta · 3 challenges live
+          </div>
+        )}
 
-        <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-vscode-fg sm:text-6xl">
-          Practice debugging,{" "}
-          <span className="text-vscode-accent">not algorithms.</span>
-        </h1>
+        {user ? (
+          <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-vscode-fg sm:text-6xl">
+            Welcome back
+            {firstName ? (
+              <>
+                ,{" "}
+                <span className="text-vscode-accent">{firstName}</span>
+              </>
+            ) : null}
+            .
+          </h1>
+        ) : (
+          <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-vscode-fg sm:text-6xl">
+            Practice debugging,{" "}
+            <span className="text-vscode-accent">not algorithms.</span>
+          </h1>
+        )}
 
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-vscode-fg-muted">
-          Real production-style codebases with real bugs. Reproduce the issue,
-          read the stack trace, find the broken line, ship the fix. Then read
-          your AI-generated postmortem.
+          {user
+            ? "Pick a broken codebase, run the failing tests, ship the fix. Your sessions and postmortems live in your account."
+            : "Real production-style codebases with real bugs. Reproduce the issue, read the stack trace, find the broken line, ship the fix. Then read your AI-generated postmortem."}
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link
-            href="/register"
-            className="group inline-flex items-center gap-2 rounded-md bg-vscode-accent px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-vscode-accent/20 transition-all hover:bg-vscode-accent-hover hover:shadow-vscode-accent/40"
-          >
-            Start debugging — it&apos;s free
-            <ArrowIcon />
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 rounded-md border border-vscode-border bg-vscode-bg-elevated px-5 py-3 text-sm font-medium text-vscode-fg transition-colors hover:bg-vscode-tab-hover"
-          >
-            I already have an account
-          </Link>
+          {user ? (
+            <Link
+              href="#challenges"
+              className="group inline-flex items-center gap-2 rounded-md bg-vscode-accent px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-vscode-accent/20 transition-all hover:bg-vscode-accent-hover hover:shadow-vscode-accent/40"
+            >
+              Pick a challenge
+              <ArrowIcon />
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="group inline-flex items-center gap-2 rounded-md bg-vscode-accent px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-vscode-accent/20 transition-all hover:bg-vscode-accent-hover hover:shadow-vscode-accent/40"
+              >
+                Start debugging — it&apos;s free
+                <ArrowIcon />
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-md border border-vscode-border bg-vscode-bg-elevated px-5 py-3 text-sm font-medium text-vscode-fg transition-colors hover:bg-vscode-tab-hover"
+              >
+                I already have an account
+              </Link>
+            </>
+          )}
         </div>
 
-        <p className="mt-6 text-xs text-vscode-fg-subtle">
-          No credit card. No leetcode. Just bugs.
-        </p>
+        {!user && (
+          <p className="mt-6 text-xs text-vscode-fg-subtle">
+            No credit card. No leetcode. Just bugs.
+          </p>
+        )}
       </div>
 
       <TerminalCarousel />
@@ -186,16 +286,24 @@ function HowItWorks() {
 
 // ---------------------- featured challenges ----------------------
 
-function FeaturedChallenges({ challenges }: { challenges: ChallengeMeta[] }) {
+function FeaturedChallenges({
+  challenges,
+  authed,
+}: {
+  challenges: ChallengeMeta[];
+  authed: boolean;
+}) {
   return (
-    <section className="py-16">
+    <section id="challenges" className="scroll-mt-8 py-16">
       <div className="mb-12 flex items-end justify-between gap-6">
         <div className="max-w-2xl">
           <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-vscode-accent">
-            Featured challenges
+            {authed ? "Choose your bug" : "Featured challenges"}
           </p>
           <h2 className="text-3xl font-bold tracking-tight text-vscode-fg sm:text-4xl">
-            Bugs that actually happen.
+            {authed
+              ? "What do you want to break (then fix) today?"
+              : "Bugs that actually happen."}
           </h2>
         </div>
         <p className="hidden text-sm text-vscode-fg-muted sm:block">
