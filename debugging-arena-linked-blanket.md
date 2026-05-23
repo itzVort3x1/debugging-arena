@@ -401,8 +401,6 @@ ANTHROPIC_API_KEY="sk-ant-..."
 5. Write `GET /api/challenges` and `GET /api/challenges/[slug]`
    **Checkpoint:** API returns 3 challenges with correct metadata
 
-claude --resume 1e21afab-c87a-4ef0-b572-14ebc53c9f8e
-
 ### Phase 3 — Auth + Session (~3h)
 
 1. Write `lib/auth.ts` (NextAuth credentials provider)
@@ -422,6 +420,65 @@ claude --resume 1e21afab-c87a-4ef0-b572-14ebc53c9f8e
 8. `ArenaLayout.tsx` — assemble all panels
 9. `app/challenges/[slug]/arena/page.tsx`
    **Checkpoint:** Navigate to /challenges/duplicate-chat-messages/arena → IDE renders with files, Monaco, problem panel
+
+    Phase 4 breakdown — 6 sub-PRs
+
+PR 4.1 — UI atoms + cn helper (low risk, ~30 min)
+
+- src/lib/utils.ts — cn() (clsx + tailwind-merge)
+- src/components/ui/Button.tsx, Badge.tsx, Spinner.tsx, MarkdownRenderer.tsx
+- Test: type-check passes. No new visual surface yet.
+
+PR 4.2 — Zustand store + hooks (no UI, pure logic)
+
+- src/store/arena.ts — files, tabs, dirty marks, test state, hints
+- src/hooks/useSession.ts — load challenge + session, debounced autosave to PATCH
+- src/hooks/useFileEditor.ts — Monaco-friendly view over the store
+- Test: type-check passes. Hooks aren't called from any UI yet.
+
+PR 4.3 — CodeEditor in isolation (highest risk — Monaco)
+
+- src/components/ide/CodeEditor.tsx — Monaco via @monaco-editor/react
+- Temporary src/app/sandbox/page.tsx to mount it standalone with hardcoded content
+- Test: Visit /sandbox → Monaco loads, theme is dark, no webpack errors in console. If Monaco workers misbehave in
+  dev, we catch it here instead of mixed-in with 8 other components.
+- (Sandbox page deleted at the end of 4.6.)
+
+PR 4.4 — Side panels (UI consumers of the store)
+
+- src/components/ide/FileExplorer.tsx — 2-level file tree
+- src/components/ide/TabBar.tsx — VSCode-style tabs with dirty dot ↔ close X
+- src/components/ide/ProblemPanel.tsx — title + difficulty badge + markdown body
+- src/components/ide/HintPanel.tsx — 4 hint tiles, sequential unlock
+- Test: type-check passes. Not visible yet.
+
+PR 4.5 — Chrome panels
+
+- src/components/ide/TopBar.tsx — title + challenge + RunButton + sign-out
+- src/components/ide/RunButton.tsx — Phase 5 stub for now
+- src/components/ide/TerminalPanel.tsx — test output area
+- src/components/ide/StatusBar.tsx — saving / dirty / test status / hints used
+- Test: type-check passes.
+
+PR 4.6 — Assembly + arena route (the big checkpoint)
+
+- src/components/ide/ArenaLayout.tsx — composes everything; dynamic-imports CodeEditor with ssr: false
+- src/app/challenges/[slug]/arena/page.tsx — auth-gated, 404 on unknown slug
+- Delete the /sandbox page from 4.3
+- Wire challenge cards on home page to link to /challenges/[slug]/arena
+- Test: Sign in → click a challenge card on / → IDE renders, files load, tabs work, edits persist (open Prisma Studio,
+  watch fileState update), reload → state restored.
+
+A few notes on what changed since last attempt
+
+- Monaco webpack plugin stays removed. @monaco-editor/react loads workers from jsdelivr CDN by default — works without
+  the plugin, doesn't pollute the webpack runtime.
+- Icons: I'll keep using inline SVG like we did on the landing pages. The lucide-react ^1.14.0 in package.json looks
+  like a wrong/stale version (current lucide-react is 0.4xx), and inline SVG kept the dev runtime clean.
+- No (auth)-style route groups — we'll use flat /challenges/[slug]/arena. Brackets are fine, parens were untested.
+- Sessions API is already live so 4.2's hooks have something real to hit immediately.
+
+claude --resume 1e21afab-c87a-4ef0-b572-14ebc53c9f8e
 
 ### Phase 5 — Test Runner + SSE (~6h)
 
