@@ -29,6 +29,11 @@ export interface ArenaState {
   saveError: string | null;
   lastSavedAt: number | null;
 
+  /** True while a test run is in flight (stubbed in Phase 4, real in Phase 5). */
+  isRunning: boolean;
+  /** Append-only buffer of terminal lines from the most recent run. */
+  terminalLines: string[];
+
   // Actions
   setChallenge: (challenge: ChallengeDefinition) => void;
   setSession: (session: DebugSessionResponse) => void;
@@ -39,8 +44,12 @@ export interface ArenaState {
   toggleProblemPanel: () => void;
   toggleHintPanel: () => void;
   toggleTerminal: () => void;
+  setTerminalOpen: (open: boolean) => void;
   setSaveStatus: (status: SaveStatus, error?: string | null) => void;
   markSaved: () => void;
+  setRunning: (running: boolean) => void;
+  appendTerminalLine: (line: string) => void;
+  clearTerminal: () => void;
   reset: () => void;
 }
 
@@ -56,6 +65,8 @@ const initialState = {
   saveStatus: "idle" as SaveStatus,
   saveError: null,
   lastSavedAt: null,
+  isRunning: false,
+  terminalLines: [] as string[],
 };
 
 export const useArenaStore = create<ArenaState>()(
@@ -132,6 +143,11 @@ export const useArenaStore = create<ArenaState>()(
         state.terminalOpen = !state.terminalOpen;
       }),
 
+    setTerminalOpen: (open) =>
+      set((state) => {
+        state.terminalOpen = open;
+      }),
+
     setSaveStatus: (status, error = null) =>
       set((state) => {
         state.saveStatus = status;
@@ -143,6 +159,21 @@ export const useArenaStore = create<ArenaState>()(
         state.saveStatus = "saved";
         state.saveError = null;
         state.lastSavedAt = Date.now();
+      }),
+
+    setRunning: (running) =>
+      set((state) => {
+        state.isRunning = running;
+      }),
+
+    appendTerminalLine: (line) =>
+      set((state) => {
+        state.terminalLines.push(line);
+      }),
+
+    clearTerminal: () =>
+      set((state) => {
+        state.terminalLines = [];
       }),
 
     reset: () =>
