@@ -322,7 +322,10 @@ function FeaturedChallenges({
 
 function ChallengeCard({ meta }: { meta: ChallengeMeta }) {
   return (
-    <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-vscode-border bg-vscode-bg-elevated/60 p-6 transition-colors hover:border-vscode-accent/60">
+    <Link
+      href={`/challenges/${meta.slug}/arena`}
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-vscode-border bg-vscode-bg-elevated/60 p-6 transition-all hover:-translate-y-0.5 hover:border-vscode-accent/60 hover:shadow-lg hover:shadow-vscode-accent/10"
+    >
       <div className="mb-3 flex items-center justify-between">
         <DifficultyBadge level={meta.difficulty} />
         <span className="text-xs text-vscode-fg-subtle">
@@ -330,7 +333,7 @@ function ChallengeCard({ meta }: { meta: ChallengeMeta }) {
         </span>
       </div>
 
-      <h3 className="mb-2 text-lg font-semibold text-vscode-fg">
+      <h3 className="mb-2 text-lg font-semibold text-vscode-fg group-hover:text-vscode-accent">
         {meta.title}
       </h3>
 
@@ -348,7 +351,7 @@ function ChallengeCard({ meta }: { meta: ChallengeMeta }) {
           </span>
         ))}
       </div>
-    </div>
+    </Link>
   );
 }
 
