@@ -8,6 +8,9 @@ import { TabBar } from "@/components/ide/TabBar";
 import { FileExplorer } from "@/components/ide/FileExplorer";
 import { ProblemPanel } from "@/components/ide/ProblemPanel";
 import { HintPanel } from "@/components/ide/HintPanel";
+import { TopBar } from "@/components/ide/TopBar";
+import { TerminalPanel } from "@/components/ide/TerminalPanel";
+import { StatusBar } from "@/components/ide/StatusBar";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
@@ -19,9 +22,12 @@ interface SandboxClientProps {
 
 /**
  * Temporary sandbox that mocks the arena layout so we can verify the
- * Phase-4 side panels in isolation. Hydrates the store with a real
- * challenge and a fake fileState (no /api/sessions call). Replaced by
- * the real /challenges/[slug]/arena route in PR 4.6.
+ * Phase-4 panels in isolation. Hydrates the store with a real challenge
+ * and a fake fileState (no /api/sessions call). Replaced by the real
+ * /challenges/[slug]/arena route in PR 4.6.
+ *
+ * The save status here is faked on edit so the StatusBar indicator has
+ * something to display — real autosave wiring is PR 4.6.
  */
 export function SandboxClient({ challenge }: SandboxClientProps) {
   const setChallenge = useArenaStore((s) => s.setChallenge);
@@ -29,19 +35,18 @@ export function SandboxClient({ challenge }: SandboxClientProps) {
   const activeFile = useArenaStore((s) => s.activeFile);
   const fileContents = useArenaStore((s) => s.fileContents);
   const setFileContent = useArenaStore((s) => s.setFileContent);
+  const setSaveStatus = useArenaStore((s) => s.setSaveStatus);
+  const markSaved = useArenaStore((s) => s.markSaved);
+  const terminalOpen = useArenaStore((s) => s.terminalOpen);
   const reset = useArenaStore((s) => s.reset);
 
   const [rightPane, setRightPane] = useState<RightPane>("problem");
 
   useEffect(() => {
     setChallenge(challenge);
-
-    // Build a fake fileState from the challenge's editable files so the
-    // store behaves as if a session had hydrated.
     const fileState: Record<string, string> = {};
     for (const f of challenge.files) fileState[f.path] = f.content;
     for (const f of challenge.testFiles) fileState[f.path] = f.content;
-
     setSession({
       id: "sandbox",
       userId: "sandbox",
@@ -55,10 +60,7 @@ export function SandboxClient({ challenge }: SandboxClientProps) {
       score: null,
       fileState,
     });
-
-    return () => {
-      reset();
-    };
+    return () => reset();
   }, [challenge, setChallenge, setSession, reset]);
 
   const activeFileMeta = activeFile
@@ -70,21 +72,23 @@ export function SandboxClient({ challenge }: SandboxClientProps) {
   const language = activeFileMeta?.language ?? "plaintext";
   const content = activeFile ? fileContents[activeFile] ?? "" : "";
 
+  function handleEdit(next: string) {
+    if (!activeFile || isReadOnly) return;
+    setFileContent(activeFile, next);
+    setSaveStatus("saving");
+    // Fake autosave so StatusBar shows live transitions in the sandbox.
+    window.setTimeout(() => markSaved(), 600);
+  }
+
   return (
     <div className="flex h-screen flex-col bg-vscode-bg text-vscode-fg">
-      <header className="flex h-9 items-center justify-between border-b border-vscode-border bg-vscode-titlebar px-3">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-medium">
-            Sandbox — Phase 4 side panels
-          </span>
+      <TopBar
+        leftExtra={
           <Badge tone="warning" size="sm">
-            TEMP — delete in PR 4.6
+            SANDBOX
           </Badge>
-        </div>
-        <span className="font-mono text-[11px] text-vscode-fg-muted">
-          {challenge.meta.slug}
-        </span>
-      </header>
+        }
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-56 shrink-0 border-r border-vscode-border">
@@ -100,7 +104,7 @@ export function SandboxClient({ challenge }: SandboxClientProps) {
                 language={language}
                 path={activeFile}
                 readOnly={isReadOnly}
-                onChange={(next) => setFileContent(activeFile, next)}
+                onChange={handleEdit}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-vscode-fg-subtle">
@@ -108,6 +112,11 @@ export function SandboxClient({ challenge }: SandboxClientProps) {
               </div>
             )}
           </div>
+          {terminalOpen ? (
+            <div className="h-48 shrink-0 border-t border-vscode-border">
+              <TerminalPanel />
+            </div>
+          ) : null}
         </section>
 
         <aside className="flex w-96 shrink-0 flex-col border-l border-vscode-border">
@@ -130,6 +139,8 @@ export function SandboxClient({ challenge }: SandboxClientProps) {
           </div>
         </aside>
       </div>
+
+      <StatusBar />
     </div>
   );
 }
