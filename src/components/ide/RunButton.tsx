@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
 
@@ -16,14 +17,38 @@ function PlayIcon({ className }: { className?: string }) {
   );
 }
 
-interface RunResponse {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
+const ANSI_CSI_RE = /\x1b\[[0-9;]*[A-Za-z]/g;
+function stripAnsi(s: string): string {
+  return s.replace(ANSI_CSI_RE, "");
+}
+
+interface ResultPayload {
   passed: number;
   failed: number;
   total: number;
+  exitCode: number | null;
   durationMs: number;
+}
+
+interface SSEFrame {
+  event: string;
+  data: unknown;
+}
+
+/** Parse one SSE frame (already split on the \n\n boundary). */
+function parseFrame(frame: string): SSEFrame | null {
+  let event = "message";
+  const dataLines: string[] = [];
+  for (const line of frame.split("\n")) {
+    if (line.startsWith("event: ")) event = line.slice(7);
+    else if (line.startsWith("data: ")) dataLines.push(line.slice(6));
+  }
+  if (dataLines.length === 0) return null;
+  try {
+    return { event, data: JSON.parse(dataLines.join("\n")) };
+  } catch {
+    return null;
+  }
 }
 
 export function RunButton() {
@@ -35,6 +60,14 @@ export function RunButton() {
   const session = useArenaStore((s) => s.session);
   const fileContents = useArenaStore((s) => s.fileContents);
 
+  const abortRef = useRef<AbortController | null>(null);
+
+  // If the component unmounts mid-run (navigation), cancel the fetch so
+  // the server kills the jest child.
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
   async function handleRun() {
     if (isRunning || !session) return;
     setTerminalOpen(true);
@@ -43,37 +76,98 @@ export function RunButton() {
     appendTerminalLine("$ pnpm test");
     appendTerminalLine("");
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // Per-stream line buffers — chunks don't align with line boundaries.
+    let stdoutBuf = "";
+    let stderrBuf = "";
+    function flushBuf(buf: string, chunk: string): string {
+      buf += chunk.replace(/\r\n/g, "\n");
+      const lines = buf.split("\n");
+      const tail = lines.pop() ?? "";
+      for (const line of lines) appendTerminalLine(stripAnsi(line));
+      return tail;
+    }
+
     try {
       const res = await fetch(`/api/sessions/${session.id}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileState: fileContents }),
+        signal: controller.signal,
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+      if (!res.ok || !res.body) {
+        const body = await res
+          .json()
+          .catch(() => ({ error: `Run failed: ${res.status}` }));
         throw new Error(body.error ?? `Run failed: ${res.status}`);
       }
-      const result = (await res.json()) as RunResponse;
 
-      // Jest writes its human-readable reporter to stderr; stdout is
-      // empty when --json --outputFile is used. Show stderr first.
-      const combined = [result.stderr, result.stdout]
-        .filter((s) => s.length > 0)
-        .join("\n");
-      for (const line of combined.split("\n")) appendTerminalLine(line);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalResult: ResultPayload | null = null;
+      let sawError: string | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let boundary;
+        while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+          const frame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          const parsed = parseFrame(frame);
+          if (!parsed) continue;
+
+          if (parsed.event === "stdout") {
+            stdoutBuf = flushBuf(
+              stdoutBuf,
+              (parsed.data as { chunk: string }).chunk
+            );
+          } else if (parsed.event === "stderr") {
+            stderrBuf = flushBuf(
+              stderrBuf,
+              (parsed.data as { chunk: string }).chunk
+            );
+          } else if (parsed.event === "result") {
+            finalResult = parsed.data as ResultPayload;
+          } else if (parsed.event === "error") {
+            sawError = (parsed.data as { message: string }).message;
+          }
+        }
+      }
+
+      // Drain partial trailing lines.
+      if (stdoutBuf) appendTerminalLine(stripAnsi(stdoutBuf));
+      if (stderrBuf) appendTerminalLine(stripAnsi(stderrBuf));
 
       appendTerminalLine("");
-      appendTerminalLine(
-        `${result.passed}/${result.total} tests passed · exit ${
-          result.exitCode ?? "—"
-        } · ${(result.durationMs / 1000).toFixed(1)}s`
-      );
+      if (sawError) {
+        appendTerminalLine(`Error: ${sawError}`);
+      } else if (finalResult) {
+        appendTerminalLine(
+          `${finalResult.passed}/${finalResult.total} tests passed · exit ${
+            finalResult.exitCode ?? "—"
+          } · ${(finalResult.durationMs / 1000).toFixed(1)}s`
+        );
+      } else {
+        appendTerminalLine("Run ended without a result event.");
+      }
     } catch (err) {
-      appendTerminalLine("");
-      appendTerminalLine(
-        `Error: ${err instanceof Error ? err.message : String(err)}`
-      );
+      if ((err as Error).name === "AbortError") {
+        appendTerminalLine("");
+        appendTerminalLine("Run cancelled.");
+      } else {
+        appendTerminalLine("");
+        appendTerminalLine(
+          `Error: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
     } finally {
+      abortRef.current = null;
       setRunning(false);
     }
   }
