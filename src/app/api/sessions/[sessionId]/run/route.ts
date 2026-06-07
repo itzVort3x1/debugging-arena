@@ -9,13 +9,6 @@ const BodySchema = z.object({
   fileState: z.record(z.string(), z.string()),
 });
 
-// Strip CSI escape sequences (colors, cursor moves, etc.). PR 5.3 will
-// preserve colors and render them via ansi-to-html in the terminal panel.
-const ANSI_CSI_RE = /\x1b\[[0-9;]*[A-Za-z]/g;
-function stripAnsi(s: string): string {
-  return s.replace(ANSI_CSI_RE, "");
-}
-
 interface RouteContext {
   params: { sessionId: string };
 }
@@ -26,9 +19,16 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/sessions/[sessionId]/run
  *
- * Runs the challenge tests against the supplied fileState. The fileState
- * sent in the body is persisted to the session before the run — so
- * clicking "Run tests" implicitly flushes any pending autosave.
+ * Streams test output as Server-Sent Events. The fileState in the body
+ * is persisted before the run starts (acts as an implicit autosave
+ * flush). When the client disconnects mid-run, the jest child process
+ * is killed via AbortController.
+ *
+ * Event types:
+ *   stdout  → { chunk: string }   raw output as it streams
+ *   stderr  → { chunk: string }
+ *   result  → { passed, failed, total, exitCode, durationMs }
+ *   error   → { message: string } fatal — stream is about to close
  */
 export async function POST(req: Request, { params }: RouteContext) {
   const userId = await getSessionUserId();
@@ -78,15 +78,63 @@ export async function POST(req: Request, { params }: RouteContext) {
     data: { fileState: JSON.stringify(parsed.data.fileState) },
   });
 
-  const result = await runChallenge(challenge, parsed.data.fileState);
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const abortController = new AbortController();
+      req.signal.addEventListener("abort", () => abortController.abort());
 
-  return NextResponse.json({
-    stdout: stripAnsi(result.stdout),
-    stderr: stripAnsi(result.stderr),
-    exitCode: result.exitCode,
-    passed: result.passed,
-    failed: result.failed,
-    total: result.total,
-    durationMs: result.durationMs,
+      const emit = (event: string, data: unknown) => {
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+            )
+          );
+        } catch {
+          // Controller already closed — happens on client disconnect.
+        }
+      };
+
+      try {
+        const result = await runChallenge(
+          challenge,
+          parsed.data.fileState,
+          {
+            onStdout: (chunk) => emit("stdout", { chunk }),
+            onStderr: (chunk) => emit("stderr", { chunk }),
+            signal: abortController.signal,
+          }
+        );
+        emit("result", {
+          passed: result.passed,
+          failed: result.failed,
+          total: result.total,
+          exitCode: result.exitCode,
+          durationMs: result.durationMs,
+        });
+      } catch (err) {
+        emit("error", {
+          message:
+            err instanceof Error ? err.message : "Unknown runner error",
+        });
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // Already closed.
+        }
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      // Tell nginx / Vercel edge to not buffer.
+      "X-Accel-Buffering": "no",
+    },
   });
 }
