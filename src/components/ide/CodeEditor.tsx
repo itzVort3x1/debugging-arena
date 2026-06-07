@@ -61,6 +61,10 @@ export function CodeEditor({
           verticalScrollbarSize: 10,
           horizontalScrollbarSize: 10,
         },
+        // Render hover/suggestion/parameter-hint widgets as fixed-position
+        // overlays so they aren't clipped by overflow:hidden ancestors.
+        fixedOverflowWidgets: true,
+        hover: { enabled: true, above: false },
       }}
     />
   );
