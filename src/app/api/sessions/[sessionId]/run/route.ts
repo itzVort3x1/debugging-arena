@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUserId } from "@/lib/auth-helpers";
 import { getChallenge } from "@/lib/challenges/registry";
 import { runChallenge } from "@/lib/runner/runChallenge";
+import { serializeSession } from "@/lib/sessions";
 
 const BodySchema = z.object({
   fileState: z.record(z.string(), z.string()),
@@ -106,12 +107,25 @@ export async function POST(req: Request, { params }: RouteContext) {
             signal: abortController.signal,
           }
         );
+
+        const updated = await prisma.debugSession.update({
+          where: { id: params.sessionId },
+          data: {
+            lastRunPassed: result.passed,
+            lastRunFailed: result.failed,
+            lastRunTotal: result.total,
+            lastRunAt: new Date(),
+            attemptsCount: { increment: 1 },
+          },
+        });
+
         emit("result", {
           passed: result.passed,
           failed: result.failed,
           total: result.total,
           exitCode: result.exitCode,
           durationMs: result.durationMs,
+          session: serializeSession(updated),
         });
       } catch (err) {
         emit("error", {

@@ -20,4 +20,11 @@ export interface DebugSessionResponse {
   score: number | null;
   /** Parsed from DB column; map of relative path → file contents. */
   fileState: Record<string, string>;
+
+  /** Denormalized counts from the most recent run. Null until first run. */
+  lastRunPassed: number | null;
+  lastRunFailed: number | null;
+  lastRunTotal: number | null;
+  /** ISO 8601 string. Null until first run. */
+  lastRunAt: string | null;
 }

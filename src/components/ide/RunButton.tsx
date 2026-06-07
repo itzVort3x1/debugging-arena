@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
+import type { DebugSessionResponse } from "@/types/session";
 
 function PlayIcon({ className }: { className?: string }) {
   return (
@@ -28,6 +29,7 @@ interface ResultPayload {
   total: number;
   exitCode: number | null;
   durationMs: number;
+  session: DebugSessionResponse;
 }
 
 interface SSEFrame {
@@ -59,6 +61,7 @@ export function RunButton() {
   const setTerminalOpen = useArenaStore((s) => s.setTerminalOpen);
   const session = useArenaStore((s) => s.session);
   const fileContents = useArenaStore((s) => s.fileContents);
+  const mergeSessionMeta = useArenaStore((s) => s.mergeSessionMeta);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -148,6 +151,7 @@ export function RunButton() {
       if (sawError) {
         appendTerminalLine(`Error: ${sawError}`);
       } else if (finalResult) {
+        mergeSessionMeta(finalResult.session);
         appendTerminalLine(
           `${finalResult.passed}/${finalResult.total} tests passed · exit ${
             finalResult.exitCode ?? "—"

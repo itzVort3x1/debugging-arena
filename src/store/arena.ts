@@ -50,6 +50,12 @@ export interface ArenaState {
   setRunning: (running: boolean) => void;
   appendTerminalLine: (line: string) => void;
   clearTerminal: () => void;
+  /**
+   * Merge non-fileState fields from a freshly fetched session into the
+   * store — used to apply run-result counts without nuking the editor's
+   * unsaved buffer.
+   */
+  mergeSessionMeta: (next: DebugSessionResponse) => void;
   reset: () => void;
 }
 
@@ -174,6 +180,17 @@ export const useArenaStore = create<ArenaState>()(
     clearTerminal: () =>
       set((state) => {
         state.terminalLines = [];
+      }),
+
+    mergeSessionMeta: (next) =>
+      set((state) => {
+        if (!state.session) {
+          state.session = next;
+          return;
+        }
+        // Preserve the existing in-memory fileState (user edits in flight)
+        // and overwrite everything else.
+        state.session = { ...next, fileState: state.session.fileState };
       }),
 
     reset: () =>

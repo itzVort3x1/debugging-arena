@@ -79,6 +79,13 @@ model DebugSession {
   score         Int?
   fileState     String        @default("{}") // JSON-encoded Record<filename, content>
 
+  // Denormalized summary of the most recent test run. TestRun keeps full
+  // history (Phase 7); these fields exist for O(1) badge reads.
+  lastRunPassed Int?
+  lastRunFailed Int?
+  lastRunTotal  Int?
+  lastRunAt     DateTime?
+
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   testRuns     TestRun[]
   hintRequests HintRequest[]

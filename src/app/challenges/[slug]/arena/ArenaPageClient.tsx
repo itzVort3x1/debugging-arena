@@ -49,7 +49,14 @@ export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
     );
   }
 
-  if (isLoading || !session) {
+  // Guard against the cross-challenge stale render. When navigating from
+  // A → B, the page component is reused; for one frame the store still
+  // holds A's session before the effect cleanup runs reset(). Treat that
+  // window as "still loading" so A's lastRun badge can't leak onto B.
+  const sessionMatchesCurrent =
+    session !== null && session.challengeSlug === challenge.meta.slug;
+
+  if (isLoading || !sessionMatchesCurrent) {
     return (
       <FullScreen>
         <div className="flex flex-col items-center gap-3 text-vscode-fg-muted">

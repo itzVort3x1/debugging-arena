@@ -32,5 +32,9 @@ export function serializeSession(s: DebugSession): DebugSessionResponse {
     timeTaken: s.timeTaken,
     score: s.score,
     fileState,
+    lastRunPassed: s.lastRunPassed,
+    lastRunFailed: s.lastRunFailed,
+    lastRunTotal: s.lastRunTotal,
+    lastRunAt: s.lastRunAt ? s.lastRunAt.toISOString() : null,
   };
 }

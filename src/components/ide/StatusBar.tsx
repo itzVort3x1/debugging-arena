@@ -20,6 +20,94 @@ function TerminalIcon({ className }: { className?: string }) {
   );
 }
 
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="m3 8 3.5 3.5L13 5" />
+    </svg>
+  );
+}
+
+function CrossIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="m4 4 8 8M12 4l-8 8" />
+    </svg>
+  );
+}
+
+function TestRunBadge() {
+  const session = useArenaStore((s) => s.session);
+  const isRunning = useArenaStore((s) => s.isRunning);
+
+  if (isRunning) {
+    return (
+      <span className="flex items-center gap-1 text-white/80">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+        Running tests…
+      </span>
+    );
+  }
+
+  // Be strict: only render the pass/fail badge if all three counts are
+  // real numbers. undefined slips past `=== null`, so an unmigrated DB
+  // or a session row from before the migration would otherwise render
+  // a phantom green badge.
+  const total = session?.lastRunTotal;
+  const passed = session?.lastRunPassed;
+  const failed = session?.lastRunFailed;
+  if (
+    !session ||
+    typeof total !== "number" ||
+    typeof passed !== "number" ||
+    typeof failed !== "number" ||
+    total === 0
+  ) {
+    return <span className="text-white/60">Not run</span>;
+  }
+
+  const lastRunPassed = passed;
+  const lastRunFailed = failed;
+  const lastRunTotal = total;
+  const allGreen = lastRunPassed === lastRunTotal && lastRunFailed === 0;
+  return (
+    <span
+      className={`flex items-center gap-1 ${
+        allGreen ? "text-vscode-success" : "text-vscode-error"
+      }`}
+      title={
+        session.lastRunAt
+          ? `Last run ${new Date(session.lastRunAt).toLocaleString()}`
+          : undefined
+      }
+    >
+      {allGreen ? (
+        <CheckIcon className="h-3.5 w-3.5" />
+      ) : (
+        <CrossIcon className="h-3.5 w-3.5" />
+      )}
+      {lastRunPassed}/{lastRunTotal} passing
+    </span>
+  );
+}
+
 function formatAgo(ms: number): string {
   const s = Math.max(1, Math.round(ms / 1000));
   if (s < 60) return `${s}s ago`;
@@ -95,6 +183,7 @@ export function StatusBar() {
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-4">
+        <TestRunBadge />
         <SaveIndicator />
         <span className="text-white/80">{fileMeta?.language ?? "—"}</span>
       </div>
