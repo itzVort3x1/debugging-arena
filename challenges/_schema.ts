@@ -46,4 +46,10 @@ export interface ChallengeDefinition {
   /** Read-only test files copied alongside `files` into the sandbox. */
   testFiles: ChallengeFile[];
   hints: HintLevel[];
+  /**
+   * Full worked solution (markdown). Optional — only present when the
+   * challenge ships a `solution.md`. Revealing it in the arena forfeits the
+   * score, and is gated behind revealing every hint first.
+   */
+  solution?: string;
 }

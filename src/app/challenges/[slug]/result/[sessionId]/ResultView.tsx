@@ -152,6 +152,16 @@ export function ResultView({ challenge, session, breakdown }: ResultViewProps) {
                             value={breakdown.timeAdjustment}
                             muted
                         />
+                        {breakdown.solutionForfeit ? (
+                            <div className="flex items-center justify-between py-2 text-sm">
+                                <span className="text-vscode-error">
+                                    Solution revealed
+                                </span>
+                                <span className="font-mono tabular-nums text-vscode-error">
+                                    score forfeited
+                                </span>
+                            </div>
+                        ) : null}
                     </div>
                     <div className="mt-2 flex items-center justify-between border-t border-vscode-border pt-3">
                         <span className="text-sm font-semibold text-vscode-fg">
@@ -186,10 +196,27 @@ export function ResultView({ challenge, session, breakdown }: ResultViewProps) {
                 </div>
 
                 {/* Postmortem placeholder - Phase 7 */}
-                <div className="mt-6 rounded-xl border border-dashed border-vscode-border bg-vscode-bg-elevated/20 p-6 text-center">
-                    <p className="text-sm text-vscode-fg-muted">
-                        An AI-generated postmortem for this fix is coming soon.
-                    </p>
+                <div className="mt-6 rounded-xl border border-dashed border-vscode-border bg-vscode-bg-elevated/20 p-6">
+                    <div className="flex items-start gap-4">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-vscode-border bg-vscode-bg-elevated text-vscode-accent">
+                            <SparkIcon />
+                        </div>
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="text-sm font-semibold text-vscode-fg">
+                                    AI postmortem
+                                </h2>
+                                <span className="inline-flex items-center rounded-full border border-vscode-accent/30 bg-vscode-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vscode-accent">
+                                    Coming soon
+                                </span>
+                            </div>
+                            <p className="mt-1.5 text-sm leading-relaxed text-vscode-fg-muted">
+                                Soon you&apos;ll get an AI-generated write-up of
+                                this fix — root cause, blast radius, and how to
+                                stop it happening again.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Actions */}
@@ -225,6 +252,30 @@ function CheckIcon() {
                 stroke="currentColor"
                 strokeWidth="2.2"
                 strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+function SparkIcon() {
+    return (
+        <svg
+            aria-hidden
+            viewBox="0 0 20 20"
+            fill="none"
+            className="h-5 w-5"
+        >
+            <path
+                d="M10 2.5l1.6 4.3 4.3 1.6-4.3 1.6L10 14.3 8.4 10l-4.3-1.6L8.4 6.8 10 2.5z"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M15.5 12.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"
+                stroke="currentColor"
+                strokeWidth="1.2"
                 strokeLinejoin="round"
             />
         </svg>

@@ -59,6 +59,7 @@ export default async function ResultPage({ params }: ResultPageProps) {
         revealedHintLevels: session.revealedHintLevels,
         attemptsCount: session.attemptsCount,
         timeTaken: session.timeTaken,
+        solutionRevealed: session.solutionRevealed,
     });
 
     return (

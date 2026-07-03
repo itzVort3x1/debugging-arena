@@ -53,5 +53,6 @@ export function serializeSession(
           (a, b) => a - b
         )
       : [],
+    solutionRevealed: s.solutionRevealed,
   };
 }

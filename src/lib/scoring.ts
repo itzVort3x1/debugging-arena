@@ -8,6 +8,8 @@ export interface ScoreInput {
     attemptsCount: number;
     /** Seconds elapsed from start to submission. Null if unknown. */
     timeTaken: number | null;
+    /** True if the user revealed the full solution — forfeits all points. */
+    solutionRevealed: boolean;
 }
 
 export interface ScoreBreakdown {
@@ -17,6 +19,8 @@ export interface ScoreBreakdown {
     hintPenalty: number;
     attemptPenalty: number;
     timeAdjustment: number;
+    /** When true, the solution was revealed and the score is forced to 0. */
+    solutionForfeit: boolean;
 }
 
 const BASE = 100;
@@ -41,10 +45,17 @@ const TIME_PENALTY = 10;
  *   + 10 if timeTaken < timeLimit/2
  *   − 10 if timeTaken > timeLimit
  *
- * Result is clamped to [0, 100].
+ * Result is clamped to [0, 100]. Revealing the full solution overrides all
+ * of the above and forces the score to 0.
  */
 export function computeScore(input: ScoreInput): ScoreBreakdown {
-    const { challenge, revealedHintLevels, attemptsCount, timeTaken } = input;
+    const {
+        challenge,
+        revealedHintLevels,
+        attemptsCount,
+        timeTaken,
+        solutionRevealed,
+    } = input;
 
     const revealed = new Set(revealedHintLevels);
     const hintPenalty = challenge.hints
@@ -65,7 +76,15 @@ export function computeScore(input: ScoreInput): ScoreBreakdown {
     }
 
     const raw = BASE - hintPenalty - attemptPenalty + timeAdjustment;
-    const score = Math.max(0, Math.min(100, raw));
+    const clamped = Math.max(0, Math.min(100, raw));
+    const score = solutionRevealed ? 0 : clamped;
 
-    return { score, base: BASE, hintPenalty, attemptPenalty, timeAdjustment };
+    return {
+        score,
+        base: BASE,
+        hintPenalty,
+        attemptPenalty,
+        timeAdjustment,
+        solutionForfeit: solutionRevealed,
+    };
 }

@@ -30,4 +30,7 @@ export interface DebugSessionResponse {
 
   /** Hint levels revealed for this session, ascending. Empty if none. */
   revealedHintLevels: number[];
+
+  /** True once the full solution was revealed — forfeits the score. */
+  solutionRevealed: boolean;
 }

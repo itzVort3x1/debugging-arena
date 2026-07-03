@@ -77,6 +77,8 @@ model DebugSession {
   attemptsCount Int           @default(0)
   timeTaken     Int? // seconds
   score         Int?
+  // True once the user reveals the full worked solution. Forfeits the score.
+  solutionRevealed Boolean    @default(false)
   fileState     String        @default("{}") // JSON-encoded Record<filename, content>
 
   // Denormalized summary of the most recent test run. TestRun keeps full

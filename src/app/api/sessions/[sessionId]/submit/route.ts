@@ -144,6 +144,7 @@ export async function POST(req: Request, { params }: RouteContext) {
         revealedHintLevels,
         attemptsCount: session.attemptsCount,
         timeTaken,
+        solutionRevealed: session.solutionRevealed,
     });
 
     const updated = await prisma.debugSession.update({

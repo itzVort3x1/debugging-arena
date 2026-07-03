@@ -1,7 +1,31 @@
 "use client";
 
-import Editor from "@monaco-editor/react";
+import Editor, { type Monaco } from "@monaco-editor/react";
 import { Spinner } from "@/components/ui/Spinner";
+
+/**
+ * Monaco's in-browser TS worker type-checks each open file in isolation,
+ * so a challenge's cross-file imports (e.g. `./types`) resolve to nothing
+ * and surface a spurious "Cannot find module" error. The real test runner
+ * materializes the whole sandbox, so those modules DO exist - silence just
+ * the module-resolution codes and keep every other diagnostic intact.
+ *
+ *   2307 - Cannot find module '...' or its type declarations
+ *   2792 - Cannot find module '...' (did you mean to set moduleResolution?)
+ */
+const MODULE_RESOLUTION_CODES = [2307, 2792];
+
+function configureMonaco(monaco: Monaco) {
+    for (const defaults of [
+        monaco.languages.typescript.typescriptDefaults,
+        monaco.languages.typescript.javascriptDefaults,
+    ]) {
+        defaults.setDiagnosticsOptions({
+            ...defaults.getDiagnosticsOptions(),
+            diagnosticCodesToIgnore: MODULE_RESOLUTION_CODES,
+        });
+    }
+}
 
 export interface CodeEditorProps {
     value: string;
@@ -34,6 +58,7 @@ export function CodeEditor({
             language={language}
             path={path}
             theme="vs-dark"
+            beforeMount={configureMonaco}
             onChange={(next) => onChange?.(next ?? "")}
             loading={
                 <div className="flex h-full items-center justify-center bg-vscode-bg text-vscode-fg-muted">

@@ -120,12 +120,19 @@ export function loadChallenge(slug: string): ChallengeDefinition {
     path.join(dir, "hints.json")
   );
 
+  // Optional: a full worked solution, revealable in the arena for 0 points.
+  const solutionPath = path.join(dir, "solution.md");
+  const solution = fs.existsSync(solutionPath)
+    ? fs.readFileSync(solutionPath, "utf-8")
+    : undefined;
+
   return {
     meta,
     description,
     files: loadEditableFiles(dir),
     testFiles: loadTestFiles(dir),
     hints,
+    solution,
   };
 }
 
