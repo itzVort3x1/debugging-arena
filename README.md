@@ -33,6 +33,7 @@ to the terminal panel over Server-Sent Events.
 npm install
 cp .env.example .env        # then fill in NEXTAUTH_SECRET
 npx prisma migrate dev      # create the SQLite db + apply migrations
+npm prisma deploy
 npm run dev
 ```
 
