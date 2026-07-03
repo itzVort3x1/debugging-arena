@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import { TerminalCarousel } from "@/components/TerminalCarousel";
@@ -9,6 +10,55 @@ import { SignOutButton } from "@/components/SignOutButton";
 interface SessionUser {
   name: string | null;
   email: string | null;
+}
+
+/** Per-challenge progress for the signed-in user, keyed by slug. */
+interface ChallengeProgress {
+  status: "IN_PROGRESS" | "SUBMITTED";
+  score: number | null;
+  sessionId: string;
+}
+
+/**
+ * Best session per challenge for the given user: a SUBMITTED session
+ * (highest score wins) outranks an in-progress one. Drives the card badges.
+ */
+async function loadProgress(
+  userId: string
+): Promise<Record<string, ChallengeProgress>> {
+  const sessions = await prisma.debugSession.findMany({
+    where: { userId, status: { in: ["IN_PROGRESS", "SUBMITTED"] } },
+    select: {
+      challengeSlug: true,
+      status: true,
+      score: true,
+      startedAt: true,
+      id: true,
+    },
+    orderBy: { startedAt: "desc" },
+  });
+
+  const map: Record<string, ChallengeProgress> = {};
+  for (const s of sessions) {
+    const existing = map[s.challengeSlug];
+    const candidate: ChallengeProgress = {
+      status: s.status as "IN_PROGRESS" | "SUBMITTED",
+      score: s.score,
+      sessionId: s.id,
+    };
+    if (!existing) {
+      map[s.challengeSlug] = candidate;
+      continue;
+    }
+    // Prefer a submitted session; among submitted, the higher score.
+    const better =
+      (candidate.status === "SUBMITTED" && existing.status !== "SUBMITTED") ||
+      (candidate.status === "SUBMITTED" &&
+        existing.status === "SUBMITTED" &&
+        (candidate.score ?? 0) > (existing.score ?? 0));
+    if (better) map[s.challengeSlug] = candidate;
+  }
+  return map;
 }
 
 export default async function HomePage() {
@@ -20,6 +70,10 @@ export default async function HomePage() {
         email: session.user.email ?? null,
       }
     : null;
+
+  const progress = session?.user?.id
+    ? await loadProgress(session.user.id)
+    : {};
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-vscode-bg text-vscode-fg">
@@ -41,7 +95,11 @@ export default async function HomePage() {
         <TopNav user={user} />
         <Hero user={user} />
         <HowItWorks />
-        <FeaturedChallenges challenges={challenges} authed={!!user} />
+        <FeaturedChallenges
+          challenges={challenges}
+          authed={!!user}
+          progress={progress}
+        />
         {!user && <ComparisonStrip />}
         {!user && <FinalCTA />}
         <Footer />
@@ -289,9 +347,11 @@ function HowItWorks() {
 function FeaturedChallenges({
   challenges,
   authed,
+  progress,
 }: {
   challenges: ChallengeMeta[];
   authed: boolean;
+  progress: Record<string, ChallengeProgress>;
 }) {
   return (
     <section id="challenges" className="scroll-mt-8 py-16">
@@ -313,24 +373,41 @@ function FeaturedChallenges({
 
       <div className="grid gap-5 md:grid-cols-3">
         {challenges.map((c) => (
-          <ChallengeCard key={c.slug} meta={c} />
+          <ChallengeCard key={c.slug} meta={c} progress={progress[c.slug]} />
         ))}
       </div>
     </section>
   );
 }
 
-function ChallengeCard({ meta }: { meta: ChallengeMeta }) {
+function ChallengeCard({
+  meta,
+  progress,
+}: {
+  meta: ChallengeMeta;
+  progress?: ChallengeProgress;
+}) {
+  const solved = progress?.status === "SUBMITTED";
+  // Solved cards deep-link to their result; otherwise open the arena.
+  const href =
+    solved && progress
+      ? `/challenges/${meta.slug}/result/${progress.sessionId}`
+      : `/challenges/${meta.slug}/arena`;
+
   return (
     <Link
-      href={`/challenges/${meta.slug}/arena`}
+      href={href}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-vscode-border bg-vscode-bg-elevated/60 p-6 transition-all hover:-translate-y-0.5 hover:border-vscode-accent/60 hover:shadow-lg hover:shadow-vscode-accent/10"
     >
       <div className="mb-3 flex items-center justify-between">
         <DifficultyBadge level={meta.difficulty} />
-        <span className="text-xs text-vscode-fg-subtle">
-          ~{Math.round(meta.timeLimit / 60)} min
-        </span>
+        {progress ? (
+          <ProgressBadge progress={progress} />
+        ) : (
+          <span className="text-xs text-vscode-fg-subtle">
+            ~{Math.round(meta.timeLimit / 60)} min
+          </span>
+        )}
       </div>
 
       <h3 className="mb-2 text-lg font-semibold text-vscode-fg group-hover:text-vscode-accent">
@@ -352,6 +429,30 @@ function ChallengeCard({ meta }: { meta: ChallengeMeta }) {
         ))}
       </div>
     </Link>
+  );
+}
+
+function ProgressBadge({ progress }: { progress: ChallengeProgress }) {
+  if (progress.status === "SUBMITTED") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-vscode-success/30 bg-vscode-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vscode-success">
+        <svg aria-hidden viewBox="0 0 20 20" fill="none" className="h-3 w-3">
+          <path
+            d="M4 10.5l3.5 3.5L16 6"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        Solved{typeof progress.score === "number" ? ` · ${progress.score}` : ""}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full border border-vscode-accent/30 bg-vscode-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vscode-accent">
+      Resume
+    </span>
   );
 }
 

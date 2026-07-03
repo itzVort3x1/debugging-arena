@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
 import type { DebugSessionResponse } from "@/types/session";
@@ -31,6 +32,7 @@ export function SubmitButton() {
   const setTerminalOpen = useArenaStore((s) => s.setTerminalOpen);
   const appendTerminalLine = useArenaStore((s) => s.appendTerminalLine);
 
+  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
 
   const isSubmitted = session?.status === "SUBMITTED";
@@ -82,6 +84,9 @@ export function SubmitButton() {
           `attempts −${data.breakdown.attemptPenalty} · time ${
             data.breakdown.timeAdjustment >= 0 ? "+" : ""
           }${data.breakdown.timeAdjustment}`
+      );
+      router.push(
+        `/challenges/${data.session.challengeSlug}/result/${data.session.id}`
       );
     } catch (err) {
       appendTerminalLine(
