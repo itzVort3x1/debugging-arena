@@ -29,7 +29,7 @@ export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
     return () => reset();
   }, [challenge, setChallenge, reset]);
 
-  const { session, isLoading, error } = useSession(challenge.meta.slug);
+  const { session, isLoading, error, reload } = useSession(challenge.meta.slug);
 
   if (error) {
     return (
@@ -39,11 +39,16 @@ export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
             Couldn&apos;t start the session
           </h1>
           <p className="mb-6 text-sm text-vscode-fg-muted">{error}</p>
-          <Link href="/">
-            <Button variant="secondary" size="sm">
-              Back to challenges
+          <div className="flex items-center justify-center gap-2">
+            <Button variant="primary" size="sm" onClick={reload}>
+              Try again
             </Button>
-          </Link>
+            <Link href="/">
+              <Button variant="secondary" size="sm">
+                Back to challenges
+              </Button>
+            </Link>
+          </div>
         </div>
       </FullScreen>
     );
@@ -67,7 +72,59 @@ export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
     );
   }
 
-  return <ArenaLayout />;
+  // The full IDE (two side panels + editor + terminal) needs real width.
+  // Below `lg` we show a notice instead of a cramped, unusable layout.
+  return (
+    <>
+      <div className="lg:hidden">
+        <SmallScreenNotice title={challenge.meta.title} />
+      </div>
+      <div className="hidden h-screen lg:block">
+        <ArenaLayout />
+      </div>
+    </>
+  );
+}
+
+function SmallScreenNotice({ title }: { title: string }) {
+  return (
+    <FullScreen>
+      <div className="max-w-sm text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-vscode-border bg-vscode-bg-elevated text-vscode-accent">
+          <svg aria-hidden viewBox="0 0 20 20" fill="none" className="h-6 w-6">
+            <rect
+              x="2.5"
+              y="4"
+              width="15"
+              height="10"
+              rx="1.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M7 17h6M10 14v3"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+        <h1 className="mb-2 text-lg font-semibold text-vscode-fg">
+          Open on a larger screen
+        </h1>
+        <p className="mb-6 text-sm text-vscode-fg-muted">
+          The {title} arena packs a code editor, terminal, and panels
+          side-by-side — it needs a laptop or desktop to be usable. Your
+          progress is saved, so pick up where you left off from a bigger screen.
+        </p>
+        <Link href="/">
+          <Button variant="secondary" size="sm">
+            Back to challenges
+          </Button>
+        </Link>
+      </div>
+    </FullScreen>
+  );
 }
 
 function FullScreen({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useArenaStore } from "@/store/arena";
 import type { DebugSessionResponse } from "@/types/session";
 
@@ -8,6 +8,8 @@ interface UseSessionResult {
     session: DebugSessionResponse | null;
     isLoading: boolean;
     error: string | null;
+    /** Re-run the session fetch (e.g. from a "Try again" button). */
+    reload: () => void;
 }
 
 /**
@@ -24,6 +26,9 @@ export function useSession(challengeSlug: string | null): UseSessionResult {
     const setSession = useArenaStore((s) => s.setSession);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [reloadCount, setReloadCount] = useState(0);
+
+    const reload = useCallback(() => setReloadCount((n) => n + 1), []);
 
     useEffect(() => {
         if (!challengeSlug) return;
@@ -63,7 +68,7 @@ export function useSession(challengeSlug: string | null): UseSessionResult {
         return () => {
             cancelled = true;
         };
-    }, [challengeSlug, setSession]);
+    }, [challengeSlug, setSession, reloadCount]);
 
-    return { session, isLoading, error };
+    return { session, isLoading, error, reload };
 }
