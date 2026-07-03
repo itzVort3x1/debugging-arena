@@ -71,8 +71,10 @@ export function RunButton() {
     return () => abortRef.current?.abort();
   }, []);
 
+  const locked = !!session && session.status !== "IN_PROGRESS";
+
   async function handleRun() {
-    if (isRunning || !session) return;
+    if (isRunning || !session || locked) return;
     setTerminalOpen(true);
     clearTerminal();
     setRunning(true);
@@ -181,6 +183,8 @@ export function RunButton() {
       size="sm"
       variant="primary"
       loading={isRunning}
+      disabled={locked}
+      title={locked ? "Session submitted — read only" : undefined}
       onClick={handleRun}
       leftIcon={isRunning ? undefined : <PlayIcon className="h-3.5 w-3.5" />}
     >

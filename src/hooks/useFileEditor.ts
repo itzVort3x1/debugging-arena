@@ -43,7 +43,10 @@ export function useFileEditor(): UseFileEditorResult {
     null;
 
   const content = activeFile ? fileContents[activeFile] ?? "" : "";
-  const isReadOnly = fileMeta?.readOnly ?? false;
+  // A file is read-only if the spec says so, OR the session is no longer
+  // editable (submitted). The whole workspace freezes on submit.
+  const sessionLocked = !!session && session.status !== "IN_PROGRESS";
+  const isReadOnly = (fileMeta?.readOnly ?? false) || sessionLocked;
   const language = fileMeta?.language ?? "plaintext";
 
   const flush = useCallback(async () => {
