@@ -1,28 +1,28 @@
 {
-  "hints": [
-    {
-      "level": 1,
-      "title": "Compare join and leave",
-      "content": "Walk through what `join()` does and what `leave()` does. They should be symmetric in terms of resources allocated and released — they aren't.",
-      "penaltyPoints": 5
-    },
-    {
-      "level": 2,
-      "title": "EventEmitter is explicit",
-      "content": "Node's EventEmitter does not auto-remove listeners when an unrelated object is garbage collected. Listeners stay until you call `off()` / `removeListener()`.",
-      "penaltyPoints": 10
-    },
-    {
-      "level": 3,
-      "title": "Keep a handle on the handler",
-      "content": "To remove a listener you need the same function reference you passed to `on()`. Store the handler somewhere keyed by userId so leave() can look it up.",
-      "penaltyPoints": 15
-    },
-    {
-      "level": 4,
-      "title": "Solution outline",
-      "content": "1) Add `private handlers = new Map<string, (msg: string) => void>()` to RoomManager.\n2) In join(): create the handler, do `this.emitter.on('message', handler)` AND `this.handlers.set(userId, handler)`.\n3) In leave(): `const h = this.handlers.get(userId); if (h) this.emitter.off('message', h); this.handlers.delete(userId);` (in addition to `users.delete`).",
-      "penaltyPoints": 25
-    }
-  ]
+    "hints": [
+        {
+            "level": 1,
+            "title": "Compare join and leave",
+            "content": "Walk through what `join()` does and what `leave()` does. They should be symmetric in terms of resources allocated and released - they aren't.",
+            "penaltyPoints": 5
+        },
+        {
+            "level": 2,
+            "title": "EventEmitter is explicit",
+            "content": "Node's EventEmitter does not auto-remove listeners when an unrelated object is garbage collected. Listeners stay until you call `off()` / `removeListener()`.",
+            "penaltyPoints": 10
+        },
+        {
+            "level": 3,
+            "title": "Keep a handle on the handler",
+            "content": "To remove a listener you need the same function reference you passed to `on()`. Store the handler somewhere keyed by userId so leave() can look it up.",
+            "penaltyPoints": 15
+        },
+        {
+            "level": 4,
+            "title": "Solution outline",
+            "content": "1) Add `private handlers = new Map<string, (msg: string) => void>()` to RoomManager.\n2) In join(): create the handler, do `this.emitter.on('message', handler)` AND `this.handlers.set(userId, handler)`.\n3) In leave(): `const h = this.handlers.get(userId); if (h) this.emitter.off('message', h); this.handlers.delete(userId);` (in addition to `users.delete`).",
+            "penaltyPoints": 25
+        }
+    ]
 }

@@ -1,28 +1,28 @@
 {
-  "hints": [
-    {
-      "level": 1,
-      "title": "What changes between sessions?",
-      "content": "Notice the duplicate messages get worse the more times a user reconnects. Look at what gets created on each connect — and what (if anything) gets cleaned up on each disconnect.",
-      "penaltyPoints": 5
-    },
-    {
-      "level": 2,
-      "title": "Lifecycle mismatch",
-      "content": "Compare onConnection() and onDisconnect(). Is there cleanup symmetry? A subscriber is allocated in one but never released in the other.",
-      "penaltyPoints": 10
-    },
-    {
-      "level": 3,
-      "title": "Track and clean",
-      "content": "You need to track each socket's subscriber so you can find and stop it on disconnect. A Map<socketId, SubscriberClient> stored on the ChatServer instance is the natural fit.",
-      "penaltyPoints": 15
-    },
-    {
-      "level": 4,
-      "title": "Solution outline",
-      "content": "1) Add `private subs = new Map<string, SubscriberClient>()` to ChatServer.\n2) In onConnection: after creating the subscriber, do `this.subs.set(socketId, sub)`.\n3) In onDisconnect: look up the sub by socketId, call `sub.unsubscribe()` and `sub.quit()`, then `this.subs.delete(socketId)`.",
-      "penaltyPoints": 25
-    }
-  ]
+    "hints": [
+        {
+            "level": 1,
+            "title": "What changes between sessions?",
+            "content": "Notice the duplicate messages get worse the more times a user reconnects. Look at what gets created on each connect - and what (if anything) gets cleaned up on each disconnect.",
+            "penaltyPoints": 5
+        },
+        {
+            "level": 2,
+            "title": "Lifecycle mismatch",
+            "content": "Compare onConnection() and onDisconnect(). Is there cleanup symmetry? A subscriber is allocated in one but never released in the other.",
+            "penaltyPoints": 10
+        },
+        {
+            "level": 3,
+            "title": "Track and clean",
+            "content": "You need to track each socket's subscriber so you can find and stop it on disconnect. A Map<socketId, SubscriberClient> stored on the ChatServer instance is the natural fit.",
+            "penaltyPoints": 15
+        },
+        {
+            "level": 4,
+            "title": "Solution outline",
+            "content": "1) Add `private subs = new Map<string, SubscriberClient>()` to ChatServer.\n2) In onConnection: after creating the subscriber, do `this.subs.set(socketId, sub)`.\n3) In onDisconnect: look up the sub by socketId, call `sub.unsubscribe()` and `sub.quit()`, then `this.subs.delete(socketId)`.",
+            "penaltyPoints": 25
+        }
+    ]
 }

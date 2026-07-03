@@ -4,28 +4,28 @@ import os from "node:os";
 import type { ChallengeDefinition } from "../../../challenges/_schema";
 
 export interface Sandbox {
-  /** Absolute path to the materialized temp directory. */
-  cwd: string;
-  /** Removes the temp directory recursively. Safe to call once. */
-  cleanup: () => Promise<void>;
+    /** Absolute path to the materialized temp directory. */
+    cwd: string;
+    /** Removes the temp directory recursively. Safe to call once. */
+    cleanup: () => Promise<void>;
 }
 
 const TSCONFIG_CONTENT = JSON.stringify(
-  {
-    compilerOptions: {
-      target: "es2020",
-      module: "commonjs",
-      moduleResolution: "node",
-      esModuleInterop: true,
-      skipLibCheck: true,
-      strict: false,
-      resolveJsonModule: true,
-      isolatedModules: false,
+    {
+        compilerOptions: {
+            target: "es2020",
+            module: "commonjs",
+            moduleResolution: "node",
+            esModuleInterop: true,
+            skipLibCheck: true,
+            strict: false,
+            resolveJsonModule: true,
+            isolatedModules: false,
+        },
+        include: ["**/*.ts"],
     },
-    include: ["**/*.ts"],
-  },
-  null,
-  2
+    null,
+    2,
 );
 
 /**
@@ -34,11 +34,11 @@ const TSCONFIG_CONTENT = JSON.stringify(
  * own resolver would fail to find the transformer.
  */
 function buildJestConfig(tsJestAbsPath: string): string {
-  // `diagnostics: false` — skip ts-jest's type-checking. We don't ship
-  // @types/jest in the sandbox tsconfig, and jest globals (describe/it/
-  // expect) are injected at runtime regardless. Tests still run; we just
-  // don't compile-fail on missing ambient types.
-  return `module.exports = {
+    // `diagnostics: false` - skip ts-jest's type-checking. We don't ship
+    // @types/jest in the sandbox tsconfig, and jest globals (describe/it/
+    // expect) are injected at runtime regardless. Tests still run; we just
+    // don't compile-fail on missing ambient types.
+    return `module.exports = {
   testEnvironment: "node",
   testMatch: ["**/tests/**/*.test.ts"],
   rootDir: __dirname,
@@ -63,33 +63,33 @@ function buildJestConfig(tsJestAbsPath: string): string {
  * by a malformed fileState that happens to include a `tests/...` key.
  */
 export async function materializeSandbox(
-  challenge: ChallengeDefinition,
-  fileState: Record<string, string>,
-  tsJestAbsPath: string
+    challenge: ChallengeDefinition,
+    fileState: Record<string, string>,
+    tsJestAbsPath: string,
 ): Promise<Sandbox> {
-  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "arena-run-"));
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "arena-run-"));
 
-  for (const [relPath, content] of Object.entries(fileState)) {
-    await writeRelative(cwd, relPath, content);
-  }
-  for (const f of challenge.testFiles) {
-    await writeRelative(cwd, f.path, f.content);
-  }
-  await writeRelative(cwd, "jest.config.js", buildJestConfig(tsJestAbsPath));
-  await writeRelative(cwd, "tsconfig.json", TSCONFIG_CONTENT);
+    for (const [relPath, content] of Object.entries(fileState)) {
+        await writeRelative(cwd, relPath, content);
+    }
+    for (const f of challenge.testFiles) {
+        await writeRelative(cwd, f.path, f.content);
+    }
+    await writeRelative(cwd, "jest.config.js", buildJestConfig(tsJestAbsPath));
+    await writeRelative(cwd, "tsconfig.json", TSCONFIG_CONTENT);
 
-  return {
-    cwd,
-    cleanup: () => fs.rm(cwd, { recursive: true, force: true }),
-  };
+    return {
+        cwd,
+        cleanup: () => fs.rm(cwd, { recursive: true, force: true }),
+    };
 }
 
 async function writeRelative(
-  root: string,
-  relPath: string,
-  content: string
+    root: string,
+    relPath: string,
+    content: string,
 ): Promise<void> {
-  const abs = path.join(root, relPath);
-  await fs.mkdir(path.dirname(abs), { recursive: true });
-  await fs.writeFile(abs, content, "utf-8");
+    const abs = path.join(root, relPath);
+    await fs.mkdir(path.dirname(abs), { recursive: true });
+    await fs.writeFile(abs, content, "utf-8");
 }

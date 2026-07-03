@@ -1,7 +1,7 @@
 import Link from "next/link";
 import RegisterForm from "./RegisterForm";
 
-export const metadata = { title: "Register — Debugging Arena" };
+export const metadata = { title: "Create account" };
 
 export default function RegisterPage() {
     return (
@@ -47,7 +47,7 @@ export default function RegisterPage() {
                                 </span>
                                 <span className="text-vscode-fg-muted">
                                     {" "}
-                                    — race conditions, memory leaks, broken
+                                    - race conditions, memory leaks, broken
                                     retries.
                                 </span>
                             </span>
@@ -60,7 +60,7 @@ export default function RegisterPage() {
                                 </span>
                                 <span className="text-vscode-fg-muted">
                                     {" "}
-                                    — Jest runs in-browser. Pass them, you ship.
+                                    - Jest runs in-browser. Pass them, you ship.
                                 </span>
                             </span>
                         </li>
@@ -72,7 +72,7 @@ export default function RegisterPage() {
                                 </span>
                                 <span className="text-vscode-fg-muted">
                                     {" "}
-                                    — get a write-up of what broke and why,
+                                    - get a write-up of what broke and why,
                                     after every fix.
                                 </span>
                             </span>

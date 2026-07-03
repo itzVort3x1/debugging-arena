@@ -14,9 +14,30 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const siteUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+const description =
+  "Practice debugging real production-style codebases. Reproduce the failure, find the broken line, ship the fix.";
+
 export const metadata: Metadata = {
-  title: "Debugging Arena",
-  description: "Practice debugging real production-like bugs.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Debugging Arena",
+    template: "%s · Debugging Arena",
+  },
+  description,
+  applicationName: "Debugging Arena",
+  openGraph: {
+    type: "website",
+    siteName: "Debugging Arena",
+    title: "Debugging Arena",
+    description,
+    url: "/",
+  },
+  twitter: {
+    card: "summary",
+    title: "Debugging Arena",
+    description,
+  },
 };
 
 export default function RootLayout({

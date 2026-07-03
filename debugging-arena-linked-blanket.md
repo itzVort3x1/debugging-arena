@@ -1,14 +1,14 @@
-# Debugging Arena — MVP Implementation Plan
+# Debugging Arena - MVP Implementation Plan
 
 ## Context
 
-Build "Debugging Arena" from scratch — a platform where developers practice debugging broken codebases instead of solving algorithm puzzles. The directory `D:\Debugging Arena` is completely empty. The full product spec was provided by the user. This plan covers MVP implementation only: 3 sample challenges, browser IDE, test runner, AI hints, scoring, and postmortems.
+Build "Debugging Arena" from scratch - a platform where developers practice debugging broken codebases instead of solving algorithm puzzles. The directory `D:\Debugging Arena` is completely empty. The full product spec was provided by the user. This plan covers MVP implementation only: 3 sample challenges, browser IDE, test runner, AI hints, scoring, and postmortems.
 
 ---
 
 ## Architecture
 
-**Single Next.js 14 (App Router) application** — no monorepo. API routes collocated with frontend. Test runner runs as a Node.js child_process (no Docker). File-based challenge definitions are the source of truth.
+**Single Next.js 14 (App Router) application** - no monorepo. API routes collocated with frontend. Test runner runs as a Node.js child_process (no Docker). File-based challenge definitions are the source of truth.
 
 ---
 
@@ -163,9 +163,9 @@ model Postmortem {
 
 Key decisions:
 
-- `challengeSlug` is a string reference — no Challenge DB table; filesystem is canonical
-- `fileState` is a `Json` column: `Record<filename, content>` — simple autosave
-- `TestRun.output` stored as text — terminal replay on session resume
+- `challengeSlug` is a string reference - no Challenge DB table; filesystem is canonical
+- `fileState` is a `Json` column: `Record<filename, content>` - simple autosave
+- `TestRun.output` stored as text - terminal replay on session resume
 
 ---
 
@@ -207,11 +207,11 @@ interface ChallengeDefinition {
 
 | Challenge                 | Root Cause                                                                                                          | Fix                                                                                                     |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `duplicate-chat-messages` | Redis subscriber created on every `socket.on('connection')`, never cleaned up on disconnect — stacks duplicate subs | Maintain `Map<socketId, subscriber>`, unsubscribe + quit on disconnect                                  |
+| `duplicate-chat-messages` | Redis subscriber created on every `socket.on('connection')`, never cleaned up on disconnect - stacks duplicate subs | Maintain `Map<socketId, subscriber>`, unsubscribe + quit on disconnect                                  |
 | `memory-leak`             | `EventEmitter.on('message', handler)` added per user join in `room-manager.ts`, never removed on leave              | Call `emitter.removeListener('message', handler)` in leave/disconnect path                              |
-| `payment-retry-bug`       | Webhook handler has no idempotency check — Stripe retries cause duplicate charges                                   | Check `processed_events` table for `paymentIntentId` before executing charge; insert on first execution |
+| `payment-retry-bug`       | Webhook handler has no idempotency check - Stripe retries cause duplicate charges                                   | Check `processed_events` table for `paymentIntentId` before executing charge; insert on first execution |
 
-Hints are **pre-written** in `hints.json` (4 levels each) — no Claude call per hint, only for postmortems.
+Hints are **pre-written** in `hints.json` (4 levels each) - no Claude call per hint, only for postmortems.
 
 ---
 
@@ -219,12 +219,12 @@ Hints are **pre-written** in `hints.json` (4 levels each) — no Claude call per
 
 ```
 ArenaLayout (flex, full viewport, bg-gray-950)
-├── TopBar (40px) — logo, title, timer (counts up), Run Tests, Submit
+├── TopBar (40px) - logo, title, timer (counts up), Run Tests, Submit
 ├── MainPanel (flex-1, flex-row)
-│   ├── LeftSidebar (220px, resizable) — FileExplorer
-│   ├── EditorPane (flex-1) — TabBar + CodeEditor (Monaco)
-│   └── RightSidebar (380px, resizable, tabbed) — ProblemPanel | HintPanel
-└── BottomPanel (220px, resizable) — TerminalPanel + test summary
+│   ├── LeftSidebar (220px, resizable) - FileExplorer
+│   ├── EditorPane (flex-1) - TabBar + CodeEditor (Monaco)
+│   └── RightSidebar (380px, resizable, tabbed) - ProblemPanel | HintPanel
+└── BottomPanel (220px, resizable) - TerminalPanel + test summary
 ```
 
 **Monaco critical details:**
@@ -249,7 +249,7 @@ POST /api/sessions/[sessionId]/run-tests
     4. Write package.json stub + jest.config.json
     5. sandbox.ts: spawn jest via child_process.spawn
        - Windows: use 'npx.cmd' not 'npx'
-       - timeout: 30s (proc.kill() on Windows — no SIGTERM)
+       - timeout: 30s (proc.kill() on Windows - no SIGTERM)
        - env: stripped to PATH + NODE_ENV=test + HOME only
        - flags: --forceExit --json --testTimeout=10000
        - --max-old-space-size=256 memory cap
@@ -362,7 +362,7 @@ interface ArenaState {
 
 1. **jest spawn**: `process.platform === 'win32' ? 'npx.cmd' : 'npx'`
 2. **process kill**: `proc.kill()` works on Windows (no SIGTERM support); no need for SIGKILL fallback
-3. **temp paths**: always `path.join(os.tmpdir(), 'arena-runs', sessionId)` — never string concatenation
+3. **temp paths**: always `path.join(os.tmpdir(), 'arena-runs', sessionId)` - never string concatenation
 4. **file encoding**: `fs.writeFileSync(path, content, { encoding: 'utf-8' })`
 5. **Monaco SSR**: `dynamic(() => import('@/components/ide/CodeEditor'), { ssr: false })`
 6. **next.config.ts**: `MonacoWebpackPlugin` must be added inside `!isServer` webpack config branch
@@ -382,7 +382,7 @@ ANTHROPIC_API_KEY="sk-ant-..."
 
 ## Implementation Phases
 
-### Phase 1 — Scaffolding (~3h)
+### Phase 1 - Scaffolding (~3h)
 
 1. `npx create-next-app@14 . --typescript --tailwind --app` (in `D:\Debugging Arena`)
 2. Install all dependencies
@@ -392,7 +392,7 @@ ANTHROPIC_API_KEY="sk-ant-..."
 6. Create all directory stubs
    **Checkpoint:** `npm run dev` starts, Prisma Studio shows empty tables
 
-### Phase 2 — Challenge Data Layer (~4h)
+### Phase 2 - Challenge Data Layer (~4h)
 
 1. Write `challenges/_schema.ts` types
 2. Write all 3 challenges: meta.json, description.md, hints.json, broken source files, test files
@@ -401,69 +401,69 @@ ANTHROPIC_API_KEY="sk-ant-..."
 5. Write `GET /api/challenges` and `GET /api/challenges/[slug]`
    **Checkpoint:** API returns 3 challenges with correct metadata
 
-### Phase 3 — Auth + Session (~3h)
+### Phase 3 - Auth + Session (~3h)
 
 1. Write `lib/auth.ts` (NextAuth credentials provider)
 2. Write login/register pages
 3. Write `POST /api/sessions` (create/resume), `GET`, `PATCH` (autosave)
    **Checkpoint:** Register → login → create session → fileState populated
 
-### Phase 4 — Browser IDE (~10h) ← Largest phase
+### Phase 4 - Browser IDE (~10h) ← Largest phase
 
-1. `store/arena.ts` — Zustand store
-2. `hooks/useFileEditor.ts` — Monaco model management
-3. `hooks/useSession.ts` — load + autosave
+1. `store/arena.ts` - Zustand store
+2. `hooks/useFileEditor.ts` - Monaco model management
+3. `hooks/useSession.ts` - load + autosave
 4. All `components/ui/` atoms
 5. `CodeEditor.tsx` (Monaco, dynamic import)
 6. `FileExplorer.tsx`, `TabBar.tsx`, `ProblemPanel.tsx`
 7. `HintPanel.tsx`, `TerminalPanel.tsx`, `StatusBar.tsx`, `TopBar.tsx`
-8. `ArenaLayout.tsx` — assemble all panels
+8. `ArenaLayout.tsx` - assemble all panels
 9. `app/challenges/[slug]/arena/page.tsx`
    **Checkpoint:** Navigate to /challenges/duplicate-chat-messages/arena → IDE renders with files, Monaco, problem panel
 
-    Phase 4 breakdown — 6 sub-PRs
+    Phase 4 breakdown - 6 sub-PRs
 
-PR 4.1 — UI atoms + cn helper (low risk, ~30 min)
+PR 4.1 - UI atoms + cn helper (low risk, ~30 min)
 
-- src/lib/utils.ts — cn() (clsx + tailwind-merge)
+- src/lib/utils.ts - cn() (clsx + tailwind-merge)
 - src/components/ui/Button.tsx, Badge.tsx, Spinner.tsx, MarkdownRenderer.tsx
 - Test: type-check passes. No new visual surface yet.
 
-PR 4.2 — Zustand store + hooks (no UI, pure logic)
+PR 4.2 - Zustand store + hooks (no UI, pure logic)
 
-- src/store/arena.ts — files, tabs, dirty marks, test state, hints
-- src/hooks/useSession.ts — load challenge + session, debounced autosave to PATCH
-- src/hooks/useFileEditor.ts — Monaco-friendly view over the store
+- src/store/arena.ts - files, tabs, dirty marks, test state, hints
+- src/hooks/useSession.ts - load challenge + session, debounced autosave to PATCH
+- src/hooks/useFileEditor.ts - Monaco-friendly view over the store
 - Test: type-check passes. Hooks aren't called from any UI yet.
 
-PR 4.3 — CodeEditor in isolation (highest risk — Monaco)
+PR 4.3 - CodeEditor in isolation (highest risk - Monaco)
 
-- src/components/ide/CodeEditor.tsx — Monaco via @monaco-editor/react
+- src/components/ide/CodeEditor.tsx - Monaco via @monaco-editor/react
 - Temporary src/app/sandbox/page.tsx to mount it standalone with hardcoded content
 - Test: Visit /sandbox → Monaco loads, theme is dark, no webpack errors in console. If Monaco workers misbehave in
   dev, we catch it here instead of mixed-in with 8 other components.
 - (Sandbox page deleted at the end of 4.6.)
 
-PR 4.4 — Side panels (UI consumers of the store)
+PR 4.4 - Side panels (UI consumers of the store)
 
-- src/components/ide/FileExplorer.tsx — 2-level file tree
-- src/components/ide/TabBar.tsx — VSCode-style tabs with dirty dot ↔ close X
-- src/components/ide/ProblemPanel.tsx — title + difficulty badge + markdown body
-- src/components/ide/HintPanel.tsx — 4 hint tiles, sequential unlock
+- src/components/ide/FileExplorer.tsx - 2-level file tree
+- src/components/ide/TabBar.tsx - VSCode-style tabs with dirty dot ↔ close X
+- src/components/ide/ProblemPanel.tsx - title + difficulty badge + markdown body
+- src/components/ide/HintPanel.tsx - 4 hint tiles, sequential unlock
 - Test: type-check passes. Not visible yet.
 
-PR 4.5 — Chrome panels
+PR 4.5 - Chrome panels
 
-- src/components/ide/TopBar.tsx — title + challenge + RunButton + sign-out
-- src/components/ide/RunButton.tsx — Phase 5 stub for now
-- src/components/ide/TerminalPanel.tsx — test output area
-- src/components/ide/StatusBar.tsx — saving / dirty / test status / hints used
+- src/components/ide/TopBar.tsx - title + challenge + RunButton + sign-out
+- src/components/ide/RunButton.tsx - Phase 5 stub for now
+- src/components/ide/TerminalPanel.tsx - test output area
+- src/components/ide/StatusBar.tsx - saving / dirty / test status / hints used
 - Test: type-check passes.
 
-PR 4.6 — Assembly + arena route (the big checkpoint)
+PR 4.6 - Assembly + arena route (the big checkpoint)
 
-- src/components/ide/ArenaLayout.tsx — composes everything; dynamic-imports CodeEditor with ssr: false
-- src/app/challenges/[slug]/arena/page.tsx — auth-gated, 404 on unknown slug
+- src/components/ide/ArenaLayout.tsx - composes everything; dynamic-imports CodeEditor with ssr: false
+- src/app/challenges/[slug]/arena/page.tsx - auth-gated, 404 on unknown slug
 - Delete the /sandbox page from 4.3
 - Wire challenge cards on home page to link to /challenges/[slug]/arena
 - Test: Sign in → click a challenge card on / → IDE renders, files load, tabs work, edits persist (open Prisma Studio,
@@ -471,26 +471,26 @@ PR 4.6 — Assembly + arena route (the big checkpoint)
 
 A few notes on what changed since last attempt
 
-- Monaco webpack plugin stays removed. @monaco-editor/react loads workers from jsdelivr CDN by default — works without
+- Monaco webpack plugin stays removed. @monaco-editor/react loads workers from jsdelivr CDN by default - works without
   the plugin, doesn't pollute the webpack runtime.
 - Icons: I'll keep using inline SVG like we did on the landing pages. The lucide-react ^1.14.0 in package.json looks
   like a wrong/stale version (current lucide-react is 0.4xx), and inline SVG kept the dev runtime clean.
-- No (auth)-style route groups — we'll use flat /challenges/[slug]/arena. Brackets are fine, parens were untested.
+- No (auth)-style route groups - we'll use flat /challenges/[slug]/arena. Brackets are fine, parens were untested.
 - Sessions API is already live so 4.2's hooks have something real to hit immediately.
 
 claude --resume 1e21afab-c87a-4ef0-b572-14ebc53c9f8e
 
-### Phase 5 — Test Runner + SSE (~6h)
+### Phase 5 - Test Runner + SSE (~6h)
 
-1. `lib/runner/sandbox.ts` — subprocess spawn with timeout
-2. `lib/runner/output-parser.ts` — Jest --json parsing
-3. `lib/runner/test-runner.ts` — temp files + jest orchestration
-4. `POST /api/sessions/[sessionId]/run-tests/route.ts` — SSE handler
-5. `hooks/useTestRunner.ts` — EventSource consumer
+1. `lib/runner/sandbox.ts` - subprocess spawn with timeout
+2. `lib/runner/output-parser.ts` - Jest --json parsing
+3. `lib/runner/test-runner.ts` - temp files + jest orchestration
+4. `POST /api/sessions/[sessionId]/run-tests/route.ts` - SSE handler
+5. `hooks/useTestRunner.ts` - EventSource consumer
 6. Wire RunButton → useTestRunner → TerminalPanel
    **Checkpoint:** Click Run Tests → Jest output streams in real-time → FAIL on unfixed code
 
-### Phase 6 — Hints + Submit + Scoring (~4h)
+### Phase 6 - Hints + Submit + Scoring (~4h)
 
 1. `POST /api/sessions/[sessionId]/hint/route.ts`
 2. `hooks/useHints.ts`, wire `HintPanel`
@@ -499,16 +499,16 @@ claude --resume 1e21afab-c87a-4ef0-b572-14ebc53c9f8e
 5. Submit modal + score display screen
    **Checkpoint:** Fix bug → submit → score with breakdown appears
 
-### Phase 7 — Postmortem + Dashboard (~4h)
+### Phase 7 - Postmortem + Dashboard (~4h)
 
-1. `lib/postmortem.ts` — Claude prompt + stream
+1. `lib/postmortem.ts` - Claude prompt + stream
 2. `POST /api/postmortem/[sessionId]/route.ts`
-3. `PostmortemReport.tsx` — streaming markdown render
-4. `app/dashboard/page.tsx` — session history
-5. `app/page.tsx` — challenge list with ChallengeCards
+3. `PostmortemReport.tsx` - streaming markdown render
+4. `app/dashboard/page.tsx` - session history
+5. `app/page.tsx` - challenge list with ChallengeCards
    **Checkpoint:** Complete challenge → postmortem streams in → dashboard shows score
 
-### Phase 8 — Polish (~4h)
+### Phase 8 - Polish (~4h)
 
 - Loading skeletons, error boundaries
 - Session resume (navigate away + back → state restored)
@@ -538,7 +538,7 @@ claude --resume 1e21afab-c87a-4ef0-b572-14ebc53c9f8e
 | File                                 | Why Critical                                                                     |
 | ------------------------------------ | -------------------------------------------------------------------------------- |
 | `prisma/schema.prisma`               | All API routes depend on correct models being generated first                    |
-| `src/lib/challenges/loader.ts`       | Bridge between file-based challenges and runtime — every route depends on it     |
-| `src/lib/runner/test-runner.ts`      | Core value prop — temp file write, Jest spawn, SSE stream, result persist        |
-| `src/components/ide/ArenaLayout.tsx` | Root of entire IDE UI — assembles all panels                                     |
-| `src/store/arena.ts`                 | Single source of truth for all IDE state — every IDE component reads/writes here |
+| `src/lib/challenges/loader.ts`       | Bridge between file-based challenges and runtime - every route depends on it     |
+| `src/lib/runner/test-runner.ts`      | Core value prop - temp file write, Jest spawn, SSE stream, result persist        |
+| `src/components/ide/ArenaLayout.tsx` | Root of entire IDE UI - assembles all panels                                     |
+| `src/store/arena.ts`                 | Single source of truth for all IDE state - every IDE component reads/writes here |

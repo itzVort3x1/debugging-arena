@@ -1,4 +1,4 @@
-// Debugging Arena — Prisma schema
+// Debugging Arena - Prisma schema
 // SQLite for development. To switch to PostgreSQL later:
 //   1. Change `provider` to "postgresql"
 //   2. Update DATABASE_URL in .env

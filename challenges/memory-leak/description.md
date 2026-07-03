@@ -18,7 +18,7 @@ the active user count stays flat.
 - Each user gets attached as a listener on a shared `EventEmitter` for the
   `"message"` channel when they join, so broadcasts reach them.
 - Bumping `setMaxListeners(Infinity)` would silence the warning but does not
-  fix the underlying leak — heap still grows.
+  fix the underlying leak - heap still grows.
 - Restarting the process resets memory, then the leak recurs.
 
 ## Your task

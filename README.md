@@ -22,7 +22,7 @@ to the terminal panel over Server-Sent Events.
 
 - **Node 18–22.** Next 14's dev/build runtime breaks on Node 24, so pin to an
   even LTS ≤ 22.
-- A **long-running Node server** for production — see
+- A **long-running Node server** for production - see
   [Deployment](#deployment). This is **not** deployable to Vercel/serverless:
   the runner spawns a Jest child process and writes to a temp dir on disk, and
   SQLite needs a persistent file.
@@ -43,15 +43,15 @@ Generate a `NEXTAUTH_SECRET` with `openssl rand -base64 32`.
 ## Deployment
 
 Target a host that runs a persistent Node process with a writable filesystem
-and a persistent disk — Render, Railway, Fly.io, a container, or a plain VPS.
+and a persistent disk - Render, Railway, Fly.io, a container, or a plain VPS.
 
 **Environment variables** (see `.env.example`):
 
-- `DATABASE_URL` — a SQLite path on a **persistent disk**, e.g.
+- `DATABASE_URL` - a SQLite path on a **persistent disk**, e.g.
   `file:/data/prod.db`. Back this file up; it is your entire database.
-- `NEXTAUTH_URL` — your public origin, e.g. `https://arena.example.com`.
-- `NEXTAUTH_SECRET` — required.
-- `ANTHROPIC_API_KEY` — optional; only used by the AI postmortem (not shipped yet).
+- `NEXTAUTH_URL` - your public origin, e.g. `https://arena.example.com`.
+- `NEXTAUTH_SECRET` - required.
+- `ANTHROPIC_API_KEY` - optional; only used by the AI postmortem (not shipped yet).
 
 **Build & run:**
 
@@ -63,15 +63,15 @@ npm start
 ```
 
 > `jest`, `ts-jest`, `typescript`, and the `prisma` CLI are declared as
-> **runtime dependencies** on purpose — the test runner needs them at request
+> **runtime dependencies** on purpose - the test runner needs them at request
 > time, so they must survive a production (`--omit=dev`) install. Don't move
 > them back to `devDependencies`.
 
 ## Project layout
 
-- `src/app` — routes (arena, result, auth, API handlers)
-- `src/components/ide` — the browser IDE (editor, tabs, terminal, panels)
-- `src/lib/runner` — sandbox materialization + Jest child-process runner
-- `src/lib/scoring.ts` — the deterministic 0–100 scoring formula
-- `challenges/` — challenge content (source, tests, hints); read from disk,
+- `src/app` - routes (arena, result, auth, API handlers)
+- `src/components/ide` - the browser IDE (editor, tabs, terminal, panels)
+- `src/lib/runner` - sandbox materialization + Jest child-process runner
+- `src/lib/scoring.ts` - the deterministic 0–100 scoring formula
+- `challenges/` - challenge content (source, tests, hints); read from disk,
   excluded from the app's type-check
