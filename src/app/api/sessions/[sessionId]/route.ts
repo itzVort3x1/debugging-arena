@@ -26,6 +26,7 @@ export async function GET(_req: Request, { params }: RouteContext) {
 
   const session = await prisma.debugSession.findUnique({
     where: { id: params.sessionId },
+    include: { hintRequests: { select: { level: true } } },
   });
   if (!session || session.userId !== userId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -78,6 +79,7 @@ export async function PATCH(req: Request, { params }: RouteContext) {
   const updated = await prisma.debugSession.update({
     where: { id: params.sessionId },
     data: { fileState: JSON.stringify(parsed.data.fileState) },
+    include: { hintRequests: { select: { level: true } } },
   });
 
   return NextResponse.json(serializeSession(updated));

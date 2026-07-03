@@ -5,15 +5,21 @@ import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import type { DebugSessionResponse } from "@/types/session";
 
 /**
- * Reveals progressive hints with score penalties. The reveal state is
- * local — hint-use tracking and score adjustments land in Phase 6 once
- * the server-side scoring contract exists.
+ * Reveals progressive hints with score penalties. Reveal state is
+ * server-authoritative: the levels live on `session.revealedHintLevels`
+ * (persisted via POST /api/sessions/:id/hints), so they survive reloads
+ * and feed scoring at submit time.
  */
 export function HintPanel() {
   const challenge = useArenaStore((s) => s.challenge);
-  const [revealed, setRevealed] = useState<Set<number>>(new Set());
+  const session = useArenaStore((s) => s.session);
+  const mergeSessionMeta = useArenaStore((s) => s.mergeSessionMeta);
+
+  const [pendingLevel, setPendingLevel] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (!challenge) {
     return (
@@ -23,9 +29,33 @@ export function HintPanel() {
     );
   }
 
+  const revealed = new Set(session?.revealedHintLevels ?? []);
   const totalPenalty = challenge.hints
     .filter((h) => revealed.has(h.level))
     .reduce((sum, h) => sum + h.penaltyPoints, 0);
+
+  async function reveal(level: number) {
+    if (!session) return;
+    setPendingLevel(level);
+    setError(null);
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/hints`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ level }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Failed: ${res.status}`);
+      }
+      const updated: DebugSessionResponse = await res.json();
+      mergeSessionMeta(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reveal hint");
+    } finally {
+      setPendingLevel(null);
+    }
+  }
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-vscode-bg-elevated">
@@ -41,6 +71,9 @@ export function HintPanel() {
         <p className="mt-1 text-xs text-vscode-fg-muted">
           Each hint reduces your final score.
         </p>
+        {error ? (
+          <p className="mt-2 text-xs text-vscode-error">{error}</p>
+        ) : null}
       </header>
 
       <div className="space-y-3 px-5 py-4">
@@ -75,13 +108,9 @@ export function HintPanel() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() =>
-                      setRevealed((prev) => {
-                        const next = new Set(prev);
-                        next.add(h.level);
-                        return next;
-                      })
-                    }
+                    loading={pendingLevel === h.level}
+                    disabled={pendingLevel !== null || !session}
+                    onClick={() => reveal(h.level)}
                   >
                     Reveal hint
                   </Button>

@@ -27,4 +27,7 @@ export interface DebugSessionResponse {
   lastRunTotal: number | null;
   /** ISO 8601 string. Null until first run. */
   lastRunAt: string | null;
+
+  /** Hint levels revealed for this session, ascending. Empty if none. */
+  revealedHintLevels: number[];
 }

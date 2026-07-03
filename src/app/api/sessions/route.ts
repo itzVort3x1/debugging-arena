@@ -52,6 +52,7 @@ export async function POST(req: Request) {
   const existing = await prisma.debugSession.findFirst({
     where: { userId, challengeSlug, status: "IN_PROGRESS" },
     orderBy: { startedAt: "desc" },
+    include: { hintRequests: { select: { level: true } } },
   });
   if (existing) {
     return NextResponse.json(serializeSession(existing), { status: 200 });

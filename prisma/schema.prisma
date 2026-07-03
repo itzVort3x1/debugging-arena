@@ -116,6 +116,9 @@ model HintRequest {
   requestedAt DateTime @default(now())
 
   session DebugSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // A given hint level can only be revealed once per session.
+  @@unique([sessionId, level])
 }
 
 model Postmortem {
