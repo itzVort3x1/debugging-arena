@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useArenaStore } from "@/store/arena";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { RunButton } from "./RunButton";
+import { SubmitButton } from "./SubmitButton";
 
 const DIFFICULTY_TONE = {
   easy: "success",
@@ -44,14 +44,7 @@ export function TopBar({ leftExtra }: TopBarProps) {
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <RunButton />
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled
-          title="Submit unlocks in Phase 6"
-        >
-          Submit
-        </Button>
+        <SubmitButton />
       </div>
     </header>
   );
