@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Debugging Arena
 
-## Getting Started
+Practice debugging real, production-style codebases in the browser. Pick a
+broken challenge, reproduce the failure by running its test suite in a live
+IDE, ship the fix, and get scored on how you did.
 
-First, run the development server:
+Each challenge is a self-contained sandbox: editable source files, a
+read-only Jest test suite, a problem writeup, and progressive hints. Tests
+run server-side in an isolated temp directory and stream their output back
+to the terminal panel over Server-Sent Events.
+
+## Stack
+
+- **Next.js 14** (App Router) + TypeScript
+- **Prisma** + SQLite
+- **NextAuth** (credentials / JWT)
+- **Monaco** editor (Zustand-backed IDE state)
+- **Tailwind** (VSCode-themed)
+- **Jest + ts-jest** test runner, spawned per run in a sandbox
+
+## Requirements
+
+- **Node 18–22.** Next 14's dev/build runtime breaks on Node 24, so pin to an
+  even LTS ≤ 22.
+- A **long-running Node server** for production — see
+  [Deployment](#deployment). This is **not** deployable to Vercel/serverless:
+  the runner spawns a Jest child process and writes to a temp dir on disk, and
+  SQLite needs a persistent file.
+
+## Local development
 
 ```bash
+npm install
+cp .env.example .env        # then fill in NEXTAUTH_SECRET
+npx prisma migrate dev      # create the SQLite db + apply migrations
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000, register an account, and pick a challenge.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Generate a `NEXTAUTH_SECRET` with `openssl rand -base64 32`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deployment
 
-## Learn More
+Target a host that runs a persistent Node process with a writable filesystem
+and a persistent disk — Render, Railway, Fly.io, a container, or a plain VPS.
 
-To learn more about Next.js, take a look at the following resources:
+**Environment variables** (see `.env.example`):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `DATABASE_URL` — a SQLite path on a **persistent disk**, e.g.
+  `file:/data/prod.db`. Back this file up; it is your entire database.
+- `NEXTAUTH_URL` — your public origin, e.g. `https://arena.example.com`.
+- `NEXTAUTH_SECRET` — required.
+- `ANTHROPIC_API_KEY` — optional; only used by the AI postmortem (not shipped yet).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Build & run:**
 
-## Deploy on Vercel
+```bash
+npm ci                      # postinstall runs `prisma generate`
+npx prisma migrate deploy   # apply migrations to the production db
+npm run build
+npm start
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+> `jest`, `ts-jest`, `typescript`, and the `prisma` CLI are declared as
+> **runtime dependencies** on purpose — the test runner needs them at request
+> time, so they must survive a production (`--omit=dev`) install. Don't move
+> them back to `devDependencies`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project layout
+
+- `src/app` — routes (arena, result, auth, API handlers)
+- `src/components/ide` — the browser IDE (editor, tabs, terminal, panels)
+- `src/lib/runner` — sandbox materialization + Jest child-process runner
+- `src/lib/scoring.ts` — the deterministic 0–100 scoring formula
+- `challenges/` — challenge content (source, tests, hints); read from disk,
+  excluded from the app's type-check
