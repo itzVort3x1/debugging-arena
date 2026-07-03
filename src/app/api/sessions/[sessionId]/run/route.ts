@@ -117,6 +117,7 @@ export async function POST(req: Request, { params }: RouteContext) {
             lastRunAt: new Date(),
             attemptsCount: { increment: 1 },
           },
+          include: { hintRequests: { select: { level: true } } },
         });
 
         emit("result", {
