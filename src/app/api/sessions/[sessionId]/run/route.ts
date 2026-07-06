@@ -4,10 +4,19 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUserId } from "@/lib/auth-helpers";
 import { getChallenge } from "@/lib/challenges/registry";
 import { runChallenge } from "@/lib/runner/runChallenge";
+import { runFile } from "@/lib/runner/runFile";
 import { serializeSession } from "@/lib/sessions";
 
 const BodySchema = z.object({
     fileState: z.record(z.string(), z.string()),
+    /**
+     * "test" (default) runs the jest suite and scores the run. "file" runs a
+     * single entry file with ts-node for its console output only — no tests,
+     * no scoring side-effects.
+     */
+    mode: z.enum(["test", "file"]).default("test"),
+    /** Required when mode === "file": path of the editable file to execute. */
+    entryPath: z.string().optional(),
 });
 
 interface RouteContext {
@@ -28,7 +37,8 @@ export const dynamic = "force-dynamic";
  * Event types:
  *   stdout  → { chunk: string }   raw output as it streams
  *   stderr  → { chunk: string }
- *   result  → { passed, failed, total, exitCode, durationMs }
+ *   result  → mode "test": { passed, failed, total, exitCode, durationMs, session }
+ *             mode "file": { exitCode, durationMs }
  *   error   → { message: string } fatal - stream is about to close
  */
 export async function POST(req: Request, { params }: RouteContext) {
@@ -74,6 +84,24 @@ export async function POST(req: Request, { params }: RouteContext) {
         );
     }
 
+    // For a file run, the entry must be one of the challenge's editable files.
+    // This blocks executing an arbitrary path or a read-only test file.
+    if (parsed.data.mode === "file") {
+        const editablePaths = new Set(challenge.files.map((f) => f.path));
+        if (!parsed.data.entryPath) {
+            return NextResponse.json(
+                { error: "entryPath is required when mode is \"file\"" },
+                { status: 400 },
+            );
+        }
+        if (!editablePaths.has(parsed.data.entryPath)) {
+            return NextResponse.json(
+                { error: "entryPath must be an editable challenge file" },
+                { status: 400 },
+            );
+        }
+    }
+
     await prisma.debugSession.update({
         where: { id: params.sessionId },
         data: { fileState: JSON.stringify(parsed.data.fileState) },
@@ -97,37 +125,55 @@ export async function POST(req: Request, { params }: RouteContext) {
                 }
             };
 
+            const streamHandlers = {
+                onStdout: (chunk: string) => emit("stdout", { chunk }),
+                onStderr: (chunk: string) => emit("stderr", { chunk }),
+                signal: abortController.signal,
+            };
+
             try {
-                const result = await runChallenge(
-                    challenge,
-                    parsed.data.fileState,
-                    {
-                        onStdout: (chunk) => emit("stdout", { chunk }),
-                        onStderr: (chunk) => emit("stderr", { chunk }),
-                        signal: abortController.signal,
-                    },
-                );
+                if (parsed.data.mode === "file") {
+                    // Run a single file for its console output. No tests, no
+                    // scoring side-effects — this must not touch attemptsCount
+                    // or the lastRun* stats.
+                    const result = await runFile(
+                        challenge,
+                        parsed.data.fileState,
+                        parsed.data.entryPath!,
+                        streamHandlers,
+                    );
+                    emit("result", {
+                        exitCode: result.exitCode,
+                        durationMs: result.durationMs,
+                    });
+                } else {
+                    const result = await runChallenge(
+                        challenge,
+                        parsed.data.fileState,
+                        streamHandlers,
+                    );
 
-                const updated = await prisma.debugSession.update({
-                    where: { id: params.sessionId },
-                    data: {
-                        lastRunPassed: result.passed,
-                        lastRunFailed: result.failed,
-                        lastRunTotal: result.total,
-                        lastRunAt: new Date(),
-                        attemptsCount: { increment: 1 },
-                    },
-                    include: { hintRequests: { select: { level: true } } },
-                });
+                    const updated = await prisma.debugSession.update({
+                        where: { id: params.sessionId },
+                        data: {
+                            lastRunPassed: result.passed,
+                            lastRunFailed: result.failed,
+                            lastRunTotal: result.total,
+                            lastRunAt: new Date(),
+                            attemptsCount: { increment: 1 },
+                        },
+                        include: { hintRequests: { select: { level: true } } },
+                    });
 
-                emit("result", {
-                    passed: result.passed,
-                    failed: result.failed,
-                    total: result.total,
-                    exitCode: result.exitCode,
-                    durationMs: result.durationMs,
-                    session: serializeSession(updated),
-                });
+                    emit("result", {
+                        passed: result.passed,
+                        failed: result.failed,
+                        total: result.total,
+                        exitCode: result.exitCode,
+                        durationMs: result.durationMs,
+                        session: serializeSession(updated),
+                    });
+                }
             } catch (err) {
                 emit("error", {
                     message:
