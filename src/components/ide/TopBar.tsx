@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useArenaStore } from "@/store/arena";
 import { Badge } from "@/components/ui/Badge";
 import { RunButton } from "./RunButton";
+import { RunFileButton } from "./RunFileButton";
 import { SubmitButton } from "./SubmitButton";
 
 const DIFFICULTY_TONE = {
@@ -43,6 +44,7 @@ export function TopBar({ leftExtra }: TopBarProps) {
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        <RunFileButton />
         <RunButton />
         <SubmitButton />
       </div>
