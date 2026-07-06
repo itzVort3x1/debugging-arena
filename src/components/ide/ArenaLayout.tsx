@@ -9,7 +9,7 @@ import { FileExplorer } from "./FileExplorer";
 import { ProblemPanel } from "./ProblemPanel";
 import { HintPanel } from "./HintPanel";
 import { TopBar } from "./TopBar";
-import { TerminalPanel } from "./TerminalPanel";
+import { TerminalDock } from "./TerminalDock";
 import { StatusBar } from "./StatusBar";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,7 @@ export function ArenaLayout() {
 
         <section className="flex flex-1 flex-col overflow-hidden">
           <TabBar />
-          <div className="flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden">
             {editor.activeFile ? (
               <CodeEditor
                 value={editor.content}
@@ -51,11 +51,7 @@ export function ArenaLayout() {
               </div>
             )}
           </div>
-          {terminalOpen ? (
-            <div className="h-48 shrink-0 border-t border-vscode-border">
-              <TerminalPanel />
-            </div>
-          ) : null}
+          {terminalOpen ? <TerminalDock /> : null}
         </section>
 
         <aside className="flex w-96 shrink-0 flex-col border-l border-vscode-border">
