@@ -88,17 +88,35 @@ export const useArenaStore = create<ArenaState>()(
             set((state) => {
                 state.session = session;
                 // Seed live editor contents from server state on (re)hydration.
-                state.fileContents = { ...session.fileState };
+                const seeded: Record<string, string> = { ...session.fileState };
+                // Backfill any challenge files missing from this session's saved
+                // fileState. A session freezes its fileState at creation, so a
+                // file added to the challenge later (e.g. playground.ts) would
+                // otherwise show up empty. Fill it from the starting content.
+                if (state.challenge) {
+                    for (const f of state.challenge.files) {
+                        if (seeded[f.path] === undefined) {
+                            seeded[f.path] = f.content;
+                        }
+                    }
+                }
+                state.fileContents = seeded;
 
-                // Pick a sensible default open tab: first editable file from the
-                // challenge spec if available, else the first key in fileState.
+                // Pick a default open tab: prefer the playground scratchpad when
+                // present, else the first editable file, else the first fileState
+                // key.
                 const editablePaths =
                     state.challenge?.files.map((f) => f.path) ??
-                    Object.keys(session.fileState);
-                const firstPath = editablePaths[0] ?? null;
-                if (firstPath && state.openTabs.length === 0) {
-                    state.openTabs = [firstPath];
-                    state.activeFile = firstPath;
+                    Object.keys(seeded);
+                const defaultPath =
+                    editablePaths.find(
+                        (p) => p === "playground.ts" || p.endsWith("/playground.ts"),
+                    ) ??
+                    editablePaths[0] ??
+                    null;
+                if (defaultPath && state.openTabs.length === 0) {
+                    state.openTabs = [defaultPath];
+                    state.activeFile = defaultPath;
                 }
             }),
 
