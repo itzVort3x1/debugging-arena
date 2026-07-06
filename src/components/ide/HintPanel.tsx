@@ -217,7 +217,7 @@ function SolutionCard({
                         <span className="text-vscode-error">
                             forfeits your score for this challenge
                         </span>{" "}
-                        — it can&apos;t be undone.
+                        - it can&apos;t be undone.
                     </p>
                     <Button
                         size="sm"

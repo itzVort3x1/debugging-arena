@@ -1,5 +1,5 @@
 /**
- * Scratchpad — run this file (the "Run file" button) to exercise the chat
+ * Scratchpad - run this file (the "Run file" button) to exercise the chat
  * server and watch its console output. Nothing here is a test; edit freely.
  *
  * It fakes a Redis-style pub/sub so you can simulate a broadcast and count how
@@ -44,7 +44,7 @@ function publish(channel: string, msg: string): void {
 
 const server = new ChatServer(factory);
 
-// Same socket connects, drops, and reconnects — a common real-world sequence.
+// Same socket connects, drops, and reconnects - a common real-world sequence.
 let deliveries = 0;
 const onMessage = (msg: string) => {
     deliveries++;

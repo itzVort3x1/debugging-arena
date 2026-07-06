@@ -25,7 +25,7 @@ const RUN_TIMEOUT_MS = 30_000;
 /**
  * Materialize the challenge into a temp dir and execute a single TypeScript
  * file directly with ts-node, streaming its stdout/stderr. Unlike
- * `runChallenge`, this runs no tests and computes no pass/fail — it's the
+ * `runChallenge`, this runs no tests and computes no pass/fail - it's the
  * "just run the file and see my console.logs" debugging path.
  *
  * ts-node is resolved from the app's own node_modules by absolute path so the
@@ -60,21 +60,17 @@ export async function runFile(
     const start = Date.now();
 
     try {
-        const proc = spawn(
-            process.execPath,
-            ["-r", tsNodeRegister, entryAbs],
-            {
-                cwd: sandbox.cwd,
-                env: {
-                    ...process.env,
-                    // Transpile only: don't fail on type errors, mirroring the
-                    // jest path's `diagnostics: false`.
-                    TS_NODE_TRANSPILE_ONLY: "1",
-                    TS_NODE_PROJECT: tsconfigPath,
-                    FORCE_COLOR: "1",
-                },
+        const proc = spawn(process.execPath, ["-r", tsNodeRegister, entryAbs], {
+            cwd: sandbox.cwd,
+            env: {
+                ...process.env,
+                // Transpile only: don't fail on type errors, mirroring the
+                // jest path's `diagnostics: false`.
+                TS_NODE_TRANSPILE_ONLY: "1",
+                TS_NODE_PROJECT: tsconfigPath,
+                FORCE_COLOR: "1",
             },
-        );
+        });
 
         let stdout = "";
         let stderr = "";

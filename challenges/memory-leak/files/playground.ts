@@ -1,5 +1,5 @@
 /**
- * Scratchpad — run this file (the "Run file" button) to exercise the room
+ * Scratchpad - run this file (the "Run file" button) to exercise the room
  * manager and watch its console output. Nothing here is a test; edit freely.
  *
  * Join a couple of users, have one leave, broadcast a message, then inspect

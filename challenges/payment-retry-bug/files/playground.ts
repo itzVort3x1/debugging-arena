@@ -1,5 +1,5 @@
 /**
- * Scratchpad — run this file (the "Run file" button) to exercise the webhook
+ * Scratchpad - run this file (the "Run file" button) to exercise the webhook
  * handler and watch its console output. Nothing here is a test; edit freely.
  *
  * Stripe retries webhooks, so the same event can arrive more than once. This
@@ -21,7 +21,9 @@ const db: PaymentDb = {
     },
     async applyCharge(paymentIntentId, amount, currency) {
         charges.push({ paymentIntentId, amount });
-        console.log(`applyCharge: ${amount} ${currency} for ${paymentIntentId}`);
+        console.log(
+            `applyCharge: ${amount} ${currency} for ${paymentIntentId}`,
+        );
     },
 };
 

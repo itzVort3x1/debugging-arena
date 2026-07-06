@@ -212,7 +212,7 @@ export function ResultView({ challenge, session, breakdown }: ResultViewProps) {
                             </div>
                             <p className="mt-1.5 text-sm leading-relaxed text-vscode-fg-muted">
                                 Soon you&apos;ll get an AI-generated write-up of
-                                this fix — root cause, blast radius, and how to
+                                this fix - root cause, blast radius, and how to
                                 stop it happening again.
                             </p>
                         </div>
@@ -260,12 +260,7 @@ function CheckIcon() {
 
 function SparkIcon() {
     return (
-        <svg
-            aria-hidden
-            viewBox="0 0 20 20"
-            fill="none"
-            className="h-5 w-5"
-        >
+        <svg aria-hidden viewBox="0 0 20 20" fill="none" className="h-5 w-5">
             <path
                 d="M10 2.5l1.6 4.3 4.3 1.6-4.3 1.6L10 14.3 8.4 10l-4.3-1.6L8.4 6.8 10 2.5z"
                 stroke="currentColor"

@@ -45,7 +45,7 @@ export interface RunStreamOptions {
  * Shared driver for the SSE run endpoint. Owns the isRunning flag, terminal
  * lifecycle, abort-on-unmount, SSE frame parsing, and per-stream line
  * buffering (chunks don't align to line boundaries). Callers supply the
- * request body, the command echo, and how to summarize the final result —
+ * request body, the command echo, and how to summarize the final result -
  * everything mode-specific lives there, not here.
  */
 export function useRunStream() {

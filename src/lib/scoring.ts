@@ -8,7 +8,7 @@ export interface ScoreInput {
     attemptsCount: number;
     /** Seconds elapsed from start to submission. Null if unknown. */
     timeTaken: number | null;
-    /** True if the user revealed the full solution — forfeits all points. */
+    /** True if the user revealed the full solution - forfeits all points. */
     solutionRevealed: boolean;
 }
 

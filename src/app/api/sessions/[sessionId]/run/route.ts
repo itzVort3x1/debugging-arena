@@ -11,7 +11,7 @@ const BodySchema = z.object({
     fileState: z.record(z.string(), z.string()),
     /**
      * "test" (default) runs the jest suite and scores the run. "file" runs a
-     * single entry file with ts-node for its console output only — no tests,
+     * single entry file with ts-node for its console output only - no tests,
      * no scoring side-effects.
      */
     mode: z.enum(["test", "file"]).default("test"),
@@ -90,7 +90,7 @@ export async function POST(req: Request, { params }: RouteContext) {
         const editablePaths = new Set(challenge.files.map((f) => f.path));
         if (!parsed.data.entryPath) {
             return NextResponse.json(
-                { error: "entryPath is required when mode is \"file\"" },
+                { error: 'entryPath is required when mode is "file"' },
                 { status: 400 },
             );
         }
@@ -134,7 +134,7 @@ export async function POST(req: Request, { params }: RouteContext) {
             try {
                 if (parsed.data.mode === "file") {
                     // Run a single file for its console output. No tests, no
-                    // scoring side-effects — this must not touch attemptsCount
+                    // scoring side-effects - this must not touch attemptsCount
                     // or the lastRun* stats.
                     const result = await runFile(
                         challenge,
