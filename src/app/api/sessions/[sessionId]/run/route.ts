@@ -1,8 +1,13 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
+import { HttpError, route } from "@/lib/api/http";
+import {
+    assertEditable,
+    assertOwned,
+    parseJsonBody,
+    requireChallenge,
+    requireUserId,
+} from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
-import { getSessionUserId } from "@/lib/auth-helpers";
-import { getChallenge } from "@/lib/challenges/registry";
+import { z } from "zod";
 import { runChallenge } from "@/lib/runner/runChallenge";
 import { runFile } from "@/lib/runner/runFile";
 import { serializeSession } from "@/lib/sessions";
@@ -41,70 +46,42 @@ export const dynamic = "force-dynamic";
  *             mode "file": { exitCode, durationMs }
  *   error   → { message: string } fatal - stream is about to close
  */
-export async function POST(req: Request, { params }: RouteContext) {
-    const userId = await getSessionUserId();
-    if (!userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = route<RouteContext>(async (req, { params }) => {
+    const userId = await requireUserId();
+    const parsedData = await parseJsonBody(req, BodySchema);
 
-    let payload: unknown;
-    try {
-        payload = await req.json();
-    } catch {
-        return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    const session = assertEditable(
+        assertOwned(
+            await prisma.debugSession.findUnique({
+                where: { id: params.sessionId },
+            }),
+            userId,
+        ),
+    );
 
-    const parsed = BodySchema.safeParse(payload);
-    if (!parsed.success) {
-        const firstMessage = parsed.error.issues[0]?.message ?? "Invalid input";
-        return NextResponse.json(
-            { error: firstMessage, issues: parsed.error.issues },
-            { status: 400 },
-        );
-    }
-
-    const session = await prisma.debugSession.findUnique({
-        where: { id: params.sessionId },
-    });
-    if (!session || session.userId !== userId) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    if (session.status !== "IN_PROGRESS") {
-        return NextResponse.json(
-            { error: "Session is not editable" },
-            { status: 409 },
-        );
-    }
-
-    const challenge = getChallenge(session.challengeSlug);
-    if (!challenge) {
-        return NextResponse.json(
-            { error: "Challenge no longer registered" },
-            { status: 500 },
-        );
-    }
+    const challenge = requireChallenge(session.challengeSlug);
 
     // For a file run, the entry must be one of the challenge's editable files.
     // This blocks executing an arbitrary path or a read-only test file.
-    if (parsed.data.mode === "file") {
+    if (parsedData.mode === "file") {
         const editablePaths = new Set(challenge.files.map((f) => f.path));
-        if (!parsed.data.entryPath) {
-            return NextResponse.json(
-                { error: 'entryPath is required when mode is "file"' },
-                { status: 400 },
+        if (!parsedData.entryPath) {
+            throw new HttpError(
+                400,
+                'entryPath is required when mode is "file"',
             );
         }
-        if (!editablePaths.has(parsed.data.entryPath)) {
-            return NextResponse.json(
-                { error: "entryPath must be an editable challenge file" },
-                { status: 400 },
+        if (!editablePaths.has(parsedData.entryPath)) {
+            throw new HttpError(
+                400,
+                "entryPath must be an editable challenge file",
             );
         }
     }
 
     await prisma.debugSession.update({
         where: { id: params.sessionId },
-        data: { fileState: JSON.stringify(parsed.data.fileState) },
+        data: { fileState: JSON.stringify(parsedData.fileState) },
     });
 
     const encoder = new TextEncoder();
@@ -132,14 +109,14 @@ export async function POST(req: Request, { params }: RouteContext) {
             };
 
             try {
-                if (parsed.data.mode === "file") {
+                if (parsedData.mode === "file") {
                     // Run a single file for its console output. No tests, no
                     // scoring side-effects - this must not touch attemptsCount
                     // or the lastRun* stats.
                     const result = await runFile(
                         challenge,
-                        parsed.data.fileState,
-                        parsed.data.entryPath!,
+                        parsedData.fileState,
+                        parsedData.entryPath!,
                         streamHandlers,
                     );
                     emit("result", {
@@ -149,7 +126,7 @@ export async function POST(req: Request, { params }: RouteContext) {
                 } else {
                     const result = await runChallenge(
                         challenge,
-                        parsed.data.fileState,
+                        parsedData.fileState,
                         streamHandlers,
                     );
 
@@ -200,4 +177,4 @@ export async function POST(req: Request, { params }: RouteContext) {
             "X-Accel-Buffering": "no",
         },
     });
-}
+});

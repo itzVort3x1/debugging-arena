@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { jsonError, route } from "@/lib/api/http";
+import { parseJsonBody } from "@/lib/api/guards";
 
 const RegisterSchema = z.object({
   email: z.string().email().max(255),
@@ -16,32 +18,17 @@ const RegisterSchema = z.object({
   name: z.string().min(1).max(100).optional(),
 });
 
-export async function POST(req: Request) {
-  let payload: unknown;
-  try {
-    payload = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+export const POST = route(async (req: Request) => {
+  const data = await parseJsonBody(req, RegisterSchema);
 
-  const parsed = RegisterSchema.safeParse(payload);
-  if (!parsed.success) {
-    // Surface the first issue's message so the UI banner shows something useful.
-    const firstMessage = parsed.error.issues[0]?.message ?? "Invalid input";
-    return NextResponse.json(
-      { error: firstMessage, issues: parsed.error.issues },
-      { status: 400 }
-    );
-  }
-
-  const email = parsed.data.email.toLowerCase().trim();
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const email = data.email.toLowerCase().trim();
+  const passwordHash = await bcrypt.hash(data.password, 12);
 
   try {
     const user = await prisma.user.create({
       data: {
         email,
-        name: parsed.data.name,
+        name: data.name,
         passwordHash,
       },
       select: { id: true, email: true },
@@ -52,11 +39,8 @@ export async function POST(req: Request) {
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 409 }
-      );
+      return jsonError(409, "Email already registered");
     }
     throw err;
   }
-}
+});

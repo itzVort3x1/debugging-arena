@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getSessionUserId } from "@/lib/auth-helpers";
+import { HttpError, route } from "@/lib/api/http";
+import { parseJsonBody, requireUserId } from "@/lib/api/guards";
 import { getChallenge } from "@/lib/challenges/registry";
 import { serializeSession } from "@/lib/sessions";
 
@@ -17,35 +18,15 @@ const CreateSessionSchema = z.object({
  * exists. Idempotent: hitting this twice without finishing the first
  * session returns the same row both times.
  */
-export async function POST(req: Request) {
-    const userId = await getSessionUserId();
-    if (!userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = route(async (req: Request) => {
+    const userId = await requireUserId();
+    const { challengeSlug } = await parseJsonBody(req, CreateSessionSchema);
 
-    let payload: unknown;
-    try {
-        payload = await req.json();
-    } catch {
-        return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
-
-    const parsed = CreateSessionSchema.safeParse(payload);
-    if (!parsed.success) {
-        const firstMessage = parsed.error.issues[0]?.message ?? "Invalid input";
-        return NextResponse.json(
-            { error: firstMessage, issues: parsed.error.issues },
-            { status: 400 },
-        );
-    }
-
-    const { challengeSlug } = parsed.data;
+    // A missing challenge here is a bad client-supplied slug, so 404 (unlike
+    // the 500 used when a stored session references an unregistered slug).
     const challenge = getChallenge(challengeSlug);
     if (!challenge) {
-        return NextResponse.json(
-            { error: "Challenge not found" },
-            { status: 404 },
-        );
+        throw new HttpError(404, "Challenge not found");
     }
 
     // Resume the most recent IN_PROGRESS session if any.
@@ -76,4 +57,4 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(serializeSession(created), { status: 201 });
-}
+});

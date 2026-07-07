@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUserId } from "@/lib/auth-helpers";
-import { getChallenge } from "@/lib/challenges/registry";
+import { HttpError, route } from "@/lib/api/http";
+import {
+    assertEditable,
+    assertOwned,
+    requireChallenge,
+    requireUserId,
+} from "@/lib/api/guards";
 import { serializeSession } from "@/lib/sessions";
 
 interface RouteContext {
@@ -19,37 +24,24 @@ export const runtime = "nodejs";
  *
  * Idempotent - revealing twice just returns the current state.
  */
-export async function POST(_req: Request, { params }: RouteContext) {
-    const userId = await getSessionUserId();
-    if (!userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = route<RouteContext>(async (_req, { params }) => {
+    const userId = await requireUserId();
 
-    const session = await prisma.debugSession.findUnique({
-        where: { id: params.sessionId },
-        include: { hintRequests: { select: { level: true } } },
-    });
-    if (!session || session.userId !== userId) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    if (session.status !== "IN_PROGRESS") {
-        return NextResponse.json(
-            { error: "Session is not editable" },
-            { status: 409 },
-        );
-    }
+    const session = assertEditable(
+        assertOwned(
+            await prisma.debugSession.findUnique({
+                where: { id: params.sessionId },
+                include: { hintRequests: { select: { level: true } } },
+            }),
+            userId,
+        ),
+    );
 
-    const challenge = getChallenge(session.challengeSlug);
-    if (!challenge) {
-        return NextResponse.json(
-            { error: "Challenge no longer registered" },
-            { status: 500 },
-        );
-    }
+    const challenge = requireChallenge(session.challengeSlug);
     if (!challenge.solution) {
-        return NextResponse.json(
-            { error: "This challenge has no solution to reveal" },
-            { status: 400 },
+        throw new HttpError(
+            400,
+            "This challenge has no solution to reveal",
         );
     }
 
@@ -64,10 +56,7 @@ export async function POST(_req: Request, { params }: RouteContext) {
         revealedLevels.has(h.level),
     );
     if (!allHintsRevealed) {
-        return NextResponse.json(
-            { error: "Reveal all hints before the solution" },
-            { status: 409 },
-        );
+        throw new HttpError(409, "Reveal all hints before the solution");
     }
 
     const updated = await prisma.debugSession.update({
@@ -77,4 +66,4 @@ export async function POST(_req: Request, { params }: RouteContext) {
     });
 
     return NextResponse.json(serializeSession(updated));
-}
+});

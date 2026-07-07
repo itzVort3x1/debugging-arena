@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getSessionUserId } from "@/lib/auth-helpers";
-import { getChallenge } from "@/lib/challenges/registry";
+import { HttpError, route } from "@/lib/api/http";
+import {
+    assertEditable,
+    assertOwned,
+    parseJsonBody,
+    requireChallenge,
+    requireUserId,
+} from "@/lib/api/guards";
 import { runChallenge } from "@/lib/runner/runChallenge";
 import { computeScore } from "@/lib/scoring";
 import { serializeSession } from "@/lib/sessions";
@@ -32,69 +38,39 @@ export const dynamic = "force-dynamic";
  * SUBMITTED the session is final - the IN_PROGRESS gate here (and in the
  * run/patch/hints routes) blocks any further edits.
  */
-export async function POST(req: Request, { params }: RouteContext) {
-    const userId = await getSessionUserId();
-    if (!userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = route<RouteContext>(async (req, { params }) => {
+    const userId = await requireUserId();
+    const { fileState } = await parseJsonBody(req, BodySchema);
 
-    let payload: unknown;
-    try {
-        payload = await req.json();
-    } catch {
-        return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    const session = assertEditable(
+        assertOwned(
+            await prisma.debugSession.findUnique({
+                where: { id: params.sessionId },
+                include: { hintRequests: { select: { level: true } } },
+            }),
+            userId,
+        ),
+        "Session has already been submitted",
+    );
 
-    const parsed = BodySchema.safeParse(payload);
-    if (!parsed.success) {
-        const firstMessage = parsed.error.issues[0]?.message ?? "Invalid input";
-        return NextResponse.json(
-            { error: firstMessage, issues: parsed.error.issues },
-            { status: 400 },
-        );
-    }
-
-    const session = await prisma.debugSession.findUnique({
-        where: { id: params.sessionId },
-        include: { hintRequests: { select: { level: true } } },
-    });
-    if (!session || session.userId !== userId) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    if (session.status !== "IN_PROGRESS") {
-        return NextResponse.json(
-            { error: "Session has already been submitted" },
-            { status: 409 },
-        );
-    }
-
-    const challenge = getChallenge(session.challengeSlug);
-    if (!challenge) {
-        return NextResponse.json(
-            { error: "Challenge no longer registered" },
-            { status: 500 },
-        );
-    }
+    const challenge = requireChallenge(session.challengeSlug);
 
     // Persist the submitted buffer before verifying (implicit autosave flush).
     await prisma.debugSession.update({
         where: { id: params.sessionId },
-        data: { fileState: JSON.stringify(parsed.data.fileState) },
+        data: { fileState: JSON.stringify(fileState) },
     });
 
     // Re-run the suite ourselves - authoritative pass/fail.
     let result;
     try {
-        result = await runChallenge(challenge, parsed.data.fileState);
+        result = await runChallenge(challenge, fileState);
     } catch (err) {
-        return NextResponse.json(
-            {
-                error:
-                    err instanceof Error
-                        ? err.message
-                        : "Test runner failed to start",
-            },
-            { status: 500 },
+        throw new HttpError(
+            500,
+            err instanceof Error
+                ? err.message
+                : "Test runner failed to start",
         );
     }
 
@@ -114,18 +90,17 @@ export async function POST(req: Request, { params }: RouteContext) {
             data: runCounts,
             include: { hintRequests: { select: { level: true } } },
         });
-        return NextResponse.json(
+        throw new HttpError(
+            409,
+            result.total === 0
+                ? "No tests ran - cannot submit."
+                : "Not all tests pass yet.",
             {
-                error:
-                    result.total === 0
-                        ? "No tests ran - cannot submit."
-                        : "Not all tests pass yet.",
                 passed: result.passed,
                 failed: result.failed,
                 total: result.total,
                 session: serializeSession(updated),
             },
-            { status: 409 },
         );
     }
 
@@ -163,4 +138,4 @@ export async function POST(req: Request, { params }: RouteContext) {
         session: serializeSession(updated),
         breakdown,
     });
-}
+});
