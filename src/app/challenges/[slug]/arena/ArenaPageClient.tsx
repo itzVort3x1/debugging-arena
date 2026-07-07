@@ -8,6 +8,7 @@ import { useSession } from "@/hooks/useSession";
 import { ArenaLayout } from "@/components/ide/ArenaLayout";
 import { Spinner } from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
+import { CenteredScreen } from "@/components/ui/CenteredScreen";
 
 interface ArenaPageClientProps {
     challenge: ChallengeDefinition;
@@ -35,7 +36,7 @@ export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
 
     if (error) {
         return (
-            <FullScreen>
+            <CenteredScreen>
                 <div className="max-w-md text-center">
                     <h1 className="mb-2 text-lg font-semibold text-vscode-error">
                         Couldn&apos;t start the session
@@ -52,7 +53,7 @@ export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
                         </Link>
                     </div>
                 </div>
-            </FullScreen>
+            </CenteredScreen>
         );
     }
 
@@ -65,12 +66,12 @@ export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
 
     if (isLoading || !sessionMatchesCurrent) {
         return (
-            <FullScreen>
+            <CenteredScreen>
                 <div className="flex flex-col items-center gap-3 text-vscode-fg-muted">
                     <Spinner size="lg" />
                     <p className="text-sm">Loading {challenge.meta.title}…</p>
                 </div>
-            </FullScreen>
+            </CenteredScreen>
         );
     }
 
@@ -90,7 +91,7 @@ export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
 
 function SmallScreenNotice({ title }: { title: string }) {
     return (
-        <FullScreen>
+        <CenteredScreen>
             <div className="max-w-sm text-center">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-vscode-border bg-vscode-bg-elevated text-vscode-accent">
                     <svg
@@ -131,14 +132,6 @@ function SmallScreenNotice({ title }: { title: string }) {
                     </Button>
                 </Link>
             </div>
-        </FullScreen>
-    );
-}
-
-function FullScreen({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="flex h-screen items-center justify-center bg-vscode-bg p-6 text-vscode-fg">
-            {children}
-        </div>
+        </CenteredScreen>
     );
 }

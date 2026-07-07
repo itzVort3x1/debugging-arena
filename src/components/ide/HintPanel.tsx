@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PanelHeader } from "@/components/ui/PanelHeader";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { LockOutlineIcon } from "@/components/ui/icons";
 import { apiFetch } from "@/lib/api-client";
@@ -28,9 +31,9 @@ export function HintPanel() {
 
     if (!challenge) {
         return (
-            <div className="flex h-full items-center justify-center bg-vscode-bg-elevated p-6 text-sm text-vscode-fg-subtle">
+            <EmptyState className="bg-vscode-bg-elevated">
                 No challenge loaded
-            </div>
+            </EmptyState>
         );
     }
 
@@ -87,12 +90,11 @@ export function HintPanel() {
 
     return (
         <div className="flex h-full flex-col overflow-y-auto bg-vscode-bg-elevated">
-            <header className="border-b border-vscode-border-subtle bg-vscode-sidebar px-5 py-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-vscode-fg">
-                        Hints
-                    </h2>
-                    {solutionRevealed ? (
+            <PanelHeader
+                title="Hints"
+                subtitle="Each hint reduces your final score."
+                action={
+                    solutionRevealed ? (
                         <Badge tone="error" size="sm">
                             Score forfeited
                         </Badge>
@@ -100,15 +102,13 @@ export function HintPanel() {
                         <Badge tone="warning" size="sm">
                             −{totalPenalty} pts so far
                         </Badge>
-                    ) : null}
-                </div>
-                <p className="mt-1 text-xs text-vscode-fg-muted">
-                    Each hint reduces your final score.
-                </p>
+                    ) : null
+                }
+            >
                 {error ? (
                     <p className="mt-2 text-xs text-vscode-error">{error}</p>
                 ) : null}
-            </header>
+            </PanelHeader>
 
             <div className="space-y-3 px-5 py-4">
                 {challenge.hints.length === 0 ? (
@@ -119,10 +119,7 @@ export function HintPanel() {
                     challenge.hints.map((h) => {
                         const isRevealed = revealed.has(h.level);
                         return (
-                            <div
-                                key={h.level}
-                                className="rounded-md border border-vscode-border-subtle bg-vscode-bg p-3"
-                            >
+                            <Card key={h.level}>
                                 <div className="mb-2 flex items-center justify-between gap-2">
                                     <div className="flex min-w-0 items-center gap-2">
                                         <span className="shrink-0 text-xs font-semibold text-vscode-fg">
@@ -149,7 +146,7 @@ export function HintPanel() {
                                         Reveal hint
                                     </Button>
                                 )}
-                            </div>
+                            </Card>
                         );
                     })
                 )}
@@ -187,7 +184,7 @@ function SolutionCard({
     onReveal,
 }: SolutionCardProps) {
     return (
-        <div className="mt-2 rounded-md border border-vscode-border bg-vscode-bg p-3">
+        <Card className="mt-2 border-vscode-border">
             <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
                     {!revealed && !unlocked ? (
@@ -228,6 +225,6 @@ function SolutionCard({
                     Reveal every hint above to unlock the full solution.
                 </p>
             )}
-        </div>
+        </Card>
     );
 }
