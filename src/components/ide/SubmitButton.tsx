@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
+import { ApiError, apiFetch } from "@/lib/api-client";
 import type { DebugSessionResponse } from "@/types/session";
 
 interface ScoreBreakdown {
@@ -55,29 +56,10 @@ export function SubmitButton() {
         appendTerminalLine("$ submit - verifying solution…");
 
         try {
-            const res = await fetch(`/api/sessions/${session.id}/submit`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ fileState: fileContents }),
-            });
-            const body = await res.json().catch(() => ({}));
-
-            if (!res.ok) {
-                // 409 carries the fresh session so the badge reflects the re-run.
-                if (body.session)
-                    mergeSessionMeta(body.session as DebugSessionResponse);
-                appendTerminalLine(
-                    `Submit rejected: ${body.error ?? `HTTP ${res.status}`}`,
-                );
-                if (typeof body.total === "number") {
-                    appendTerminalLine(
-                        `  ${body.passed}/${body.total} passing - fix the rest and try again.`,
-                    );
-                }
-                return;
-            }
-
-            const data = body as SubmitSuccess;
+            const data = await apiFetch<SubmitSuccess>(
+                `/api/sessions/${session.id}/submit`,
+                { method: "POST", json: { fileState: fileContents } },
+            );
             mergeSessionMeta(data.session);
             appendTerminalLine(
                 `✓ Submitted - score ${data.breakdown.score}/100`,
@@ -92,9 +74,26 @@ export function SubmitButton() {
                 `/challenges/${data.session.challengeSlug}/result/${data.session.id}`,
             );
         } catch (err) {
-            appendTerminalLine(
-                `Submit failed: ${err instanceof Error ? err.message : String(err)}`,
-            );
+            if (err instanceof ApiError) {
+                // Rejected re-run (e.g. 409) carries the fresh session so the
+                // badge reflects the server's verdict, plus the pass counts.
+                const body = err.body as {
+                    session?: DebugSessionResponse;
+                    passed?: number;
+                    total?: number;
+                };
+                if (body?.session) mergeSessionMeta(body.session);
+                appendTerminalLine(`Submit rejected: ${err.message}`);
+                if (typeof body?.total === "number") {
+                    appendTerminalLine(
+                        `  ${body.passed}/${body.total} passing - fix the rest and try again.`,
+                    );
+                }
+            } else {
+                appendTerminalLine(
+                    `Submit failed: ${err instanceof Error ? err.message : String(err)}`,
+                );
+            }
         } finally {
             setSubmitting(false);
         }

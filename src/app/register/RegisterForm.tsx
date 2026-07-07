@@ -13,6 +13,7 @@ import {
   EyeOffIcon,
   SpinnerIcon,
 } from "@/components/ui/icons";
+import { ApiError, apiFetch } from "@/lib/api-client";
 
 const passwordRules = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -42,16 +43,15 @@ export default function RegisterForm() {
     setSubmitting(true);
     setError(null);
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name || undefined, email, password }),
-    });
-
-    if (!res.ok) {
+    try {
+      await apiFetch("/api/auth/register", {
+        method: "POST",
+        json: { name: name || undefined, email, password },
+        fallbackError: "Registration failed",
+      });
+    } catch (err) {
       setSubmitting(false);
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(body.error ?? "Registration failed");
+      setError(err instanceof ApiError ? err.message : "Registration failed");
       return;
     }
 
