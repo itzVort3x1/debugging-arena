@@ -5,6 +5,7 @@ import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { LockOutlineIcon } from "@/components/ui/icons";
 import type { DebugSessionResponse } from "@/types/session";
 
 /**
@@ -198,7 +199,9 @@ function SolutionCard({
         <div className="mt-2 rounded-md border border-vscode-border bg-vscode-bg p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
-                    {!revealed && !unlocked ? <LockIcon /> : null}
+                    {!revealed && !unlocked ? (
+                        <LockOutlineIcon className="h-3.5 w-3.5 shrink-0 text-vscode-fg-subtle" />
+                    ) : null}
                     <span className="shrink-0 text-xs font-semibold text-vscode-fg">
                         Solution
                     </span>
@@ -235,32 +238,5 @@ function SolutionCard({
                 </p>
             )}
         </div>
-    );
-}
-
-function LockIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-3.5 w-3.5 shrink-0 text-vscode-fg-subtle"
-        >
-            <rect
-                x="3.5"
-                y="7"
-                width="9"
-                height="6.5"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.3"
-            />
-            <path
-                d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"
-                stroke="currentColor"
-                strokeWidth="1.3"
-                strokeLinecap="round"
-            />
-        </svg>
     );
 }

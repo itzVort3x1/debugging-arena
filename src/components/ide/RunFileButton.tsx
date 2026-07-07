@@ -3,26 +3,8 @@
 import { useState } from "react";
 import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
+import { RunFileIcon } from "@/components/ui/icons";
 import { useRunStream } from "./useRunStream";
-
-function FileRunIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={className}
-            aria-hidden="true"
-        >
-            <path d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h5" />
-            <path d="M9 1.5 12.5 5H9z" />
-            <path d="m10.5 8.5 3 2-3 2z" fill="currentColor" stroke="none" />
-        </svg>
-    );
-}
 
 interface FileResultPayload {
     exitCode: number | null;
@@ -92,7 +74,7 @@ export function RunFileButton() {
             title={title}
             onClick={handleRunFile}
             leftIcon={
-                pending ? undefined : <FileRunIcon className="h-3.5 w-3.5" />
+                pending ? undefined : <RunFileIcon className="h-3.5 w-3.5" />
             }
         >
             {pending ? "Running" : "Run file"}

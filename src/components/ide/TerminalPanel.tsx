@@ -2,23 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useArenaStore } from "@/store/arena";
-
-function ChevronDownIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="m4 6 4 4 4-4" />
-    </svg>
-  );
-}
+import { ChevronDownIcon } from "@/components/ui/icons";
 
 export function TerminalPanel() {
   const lines = useArenaStore((s) => s.terminalLines);

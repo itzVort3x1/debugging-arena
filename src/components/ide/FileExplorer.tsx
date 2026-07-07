@@ -2,32 +2,7 @@
 
 import { useArenaStore } from "@/store/arena";
 import { cn } from "@/lib/utils";
-
-function FileIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M3 1.5A1.5 1.5 0 0 1 4.5 0h5L13 3.5v11A1.5 1.5 0 0 1 11.5 16h-7A1.5 1.5 0 0 1 3 14.5v-13ZM9 1H4.5a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V4H9.5A.5.5 0 0 1 9 3.5V1Zm1 .707V3h1.293L10 1.707Z" />
-    </svg>
-  );
-}
-
-function LockIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M5 6V4a3 3 0 1 1 6 0v2h.5A1.5 1.5 0 0 1 13 7.5v6a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 13.5v-6A1.5 1.5 0 0 1 4.5 6H5Zm1 0h4V4a2 2 0 1 0-4 0v2Z" />
-    </svg>
-  );
-}
+import { FileIcon, LockIcon } from "@/components/ui/icons";
 
 interface FileRowProps {
   path: string;
