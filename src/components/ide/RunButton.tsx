@@ -3,21 +3,9 @@
 import { useState } from "react";
 import { useArenaStore } from "@/store/arena";
 import { Button } from "@/components/ui/Button";
+import { PlayIcon } from "@/components/ui/icons";
 import { useRunStream } from "./useRunStream";
 import type { DebugSessionResponse } from "@/types/session";
-
-function PlayIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            className={className}
-            aria-hidden="true"
-        >
-            <path d="M4 3.5v9a.5.5 0 0 0 .77.42l7-4.5a.5.5 0 0 0 0-.84l-7-4.5A.5.5 0 0 0 4 3.5Z" />
-        </svg>
-    );
-}
 
 interface ResultPayload {
     passed: number;

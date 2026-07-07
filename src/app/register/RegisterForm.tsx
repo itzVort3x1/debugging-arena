@@ -4,6 +4,15 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import {
+  AlertCircleIcon,
+  ArrowIcon,
+  CheckIcon,
+  DotIcon,
+  EyeIcon,
+  EyeOffIcon,
+  SpinnerIcon,
+} from "@/components/ui/icons";
 
 const passwordRules = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -119,7 +128,11 @@ export default function RegisterForm() {
                 r.met ? "text-vscode-success" : "text-vscode-fg-subtle"
               }`}
             >
-              {r.met ? <CheckIcon /> : <DotIcon />}
+              {r.met ? (
+                <CheckIcon className="h-3.5 w-3.5 shrink-0" />
+              ) : (
+                <DotIcon className="h-3.5 w-3.5 shrink-0" />
+              )}
               {r.label}
             </li>
           ))}
@@ -131,7 +144,7 @@ export default function RegisterForm() {
           className="flex items-start gap-2 rounded-md border border-vscode-error/40 bg-vscode-error/10 px-3 py-2 text-sm text-vscode-error"
           role="alert"
         >
-          <ErrorIcon />
+          <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -143,13 +156,13 @@ export default function RegisterForm() {
       >
         {submitting ? (
           <>
-            <SpinnerIcon />
+            <SpinnerIcon className="h-4 w-4" />
             Creating account…
           </>
         ) : (
           <>
             Create account
-            <ArrowIcon />
+            <ArrowIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </>
         )}
       </button>
@@ -213,158 +226,14 @@ function Field({
             tabIndex={-1}
             className="absolute inset-y-0 right-0 flex items-center px-3 text-vscode-fg-muted transition-colors hover:text-vscode-fg"
           >
-            {revealed ? <EyeOffIcon /> : <EyeIcon />}
+            {revealed ? (
+              <EyeOffIcon className="h-4 w-4" />
+            ) : (
+              <EyeIcon className="h-4 w-4" />
+            )}
           </button>
         )}
       </div>
     </div>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 20 20"
-      fill="none"
-      className="h-4 w-4"
-    >
-      <path
-        d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6S1.5 10 1.5 10z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle
-        cx="10"
-        cy="10"
-        r="2.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 20 20"
-      fill="none"
-      className="h-4 w-4"
-    >
-      <path
-        d="M3 3l14 14"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M8.2 5.3A8 8 0 0 1 10 5c4.5 0 7.5 5 7.5 5a13 13 0 0 1-2.2 2.7M12 12.5a3 3 0 0 1-4-4M2.5 10S5 5.5 9 5.1m3 5a3 3 0 0 0-3-3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 20 20"
-      fill="none"
-      className="h-3.5 w-3.5 shrink-0"
-    >
-      <path
-        d="M4 10.5l3.5 3.5L16 6"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function DotIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 20 20"
-      fill="none"
-      className="h-3.5 w-3.5 shrink-0"
-    >
-      <circle cx="10" cy="10" r="2" fill="currentColor" />
-    </svg>
-  );
-}
-
-function SpinnerIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      className="h-4 w-4 animate-spin"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="3"
-        opacity="0.25"
-      />
-      <path
-        d="M22 12a10 10 0 0 1-10 10"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 20 20"
-      fill="none"
-      className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-    >
-      <path
-        d="M4 10h12m0 0l-4-4m4 4l-4 4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ErrorIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 20 20"
-      fill="none"
-      className="mt-0.5 h-4 w-4 shrink-0"
-    >
-      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M10 6v4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <circle cx="10" cy="13.5" r="1" fill="currentColor" />
-    </svg>
   );
 }

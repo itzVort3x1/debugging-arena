@@ -2,56 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useArenaStore } from "@/store/arena";
-
-function TerminalIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={className}
-            aria-hidden="true"
-        >
-            <path d="m3 5 3 3-3 3M8 11h5" />
-        </svg>
-    );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={className}
-            aria-hidden="true"
-        >
-            <path d="m3 8 3.5 3.5L13 5" />
-        </svg>
-    );
-}
-
-function CrossIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            className={className}
-            aria-hidden="true"
-        >
-            <path d="m4 4 8 8M12 4l-8 8" />
-        </svg>
-    );
-}
+import { CheckIcon, CloseIcon, TerminalIcon } from "@/components/ui/icons";
 
 function TestRunBadge() {
     const session = useArenaStore((s) => s.session);
@@ -101,7 +52,7 @@ function TestRunBadge() {
             {allGreen ? (
                 <CheckIcon className="h-3.5 w-3.5" />
             ) : (
-                <CrossIcon className="h-3.5 w-3.5" />
+                <CloseIcon className="h-3.5 w-3.5" />
             )}
             {lastRunPassed}/{lastRunTotal} passing
         </span>
