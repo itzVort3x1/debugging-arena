@@ -2,6 +2,7 @@
 
 import { useArenaStore } from "@/store/arena";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { FileIcon, LockIcon } from "@/components/ui/icons";
 
 interface FileRowProps {
@@ -57,9 +58,9 @@ export function FileExplorer() {
 
   if (!challenge) {
     return (
-      <div className="flex h-full items-center justify-center bg-vscode-sidebar p-4 text-xs text-vscode-fg-subtle">
+      <EmptyState className="bg-vscode-sidebar p-4 text-xs">
         No challenge loaded
-      </div>
+      </EmptyState>
     );
   }
 
