@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getSessionUserId } from "@/lib/auth-helpers";
-import { getChallenge } from "@/lib/challenges/registry";
+import { HttpError, route } from "@/lib/api/http";
+import {
+    assertEditable,
+    assertOwned,
+    parseJsonBody,
+    requireChallenge,
+    requireUserId,
+} from "@/lib/api/guards";
 import { serializeSession } from "@/lib/sessions";
 
 const BodySchema = z.object({
@@ -26,51 +32,25 @@ export const runtime = "nodejs";
  * @@unique([sessionId, level]) constraint; we swallow the duplicate and
  * return the current state either way.
  */
-export async function POST(req: Request, { params }: RouteContext) {
-    const userId = await getSessionUserId();
-    if (!userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = route<RouteContext>(async (req, { params }) => {
+    const userId = await requireUserId();
+    const { level } = await parseJsonBody(req, BodySchema);
 
-    let payload: unknown;
-    try {
-        payload = await req.json();
-    } catch {
-        return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    const session = assertEditable(
+        assertOwned(
+            await prisma.debugSession.findUnique({
+                where: { id: params.sessionId },
+            }),
+            userId,
+        ),
+    );
 
-    const parsed = BodySchema.safeParse(payload);
-    if (!parsed.success) {
-        const firstMessage = parsed.error.issues[0]?.message ?? "Invalid input";
-        return NextResponse.json({ error: firstMessage }, { status: 400 });
-    }
-    const { level } = parsed.data;
-
-    const session = await prisma.debugSession.findUnique({
-        where: { id: params.sessionId },
-    });
-    if (!session || session.userId !== userId) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    if (session.status !== "IN_PROGRESS") {
-        return NextResponse.json(
-            { error: "Session is not editable" },
-            { status: 409 },
-        );
-    }
-
-    const challenge = getChallenge(session.challengeSlug);
-    if (!challenge) {
-        return NextResponse.json(
-            { error: "Challenge no longer registered" },
-            { status: 500 },
-        );
-    }
+    const challenge = requireChallenge(session.challengeSlug);
     // The requested level must actually exist for this challenge.
     if (!challenge.hints.some((h) => h.level === level)) {
-        return NextResponse.json(
-            { error: `No hint at level ${level} for this challenge` },
-            { status: 400 },
+        throw new HttpError(
+            400,
+            `No hint at level ${level} for this challenge`,
         );
     }
 
@@ -97,4 +77,4 @@ export async function POST(req: Request, { params }: RouteContext) {
     });
 
     return NextResponse.json(serializeSession(updated));
-}
+});
