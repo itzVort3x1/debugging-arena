@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useArenaStore } from "@/store/arena";
+import { apiFetch } from "@/lib/api-client";
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 
@@ -59,16 +60,12 @@ export function useFileEditor(): UseFileEditorResult {
 
     setSaveStatus("saving");
     try {
-      const res = await fetch(`/api/sessions/${session.id}`, {
+      await apiFetch(`/api/sessions/${session.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileState: snapshot }),
+        json: { fileState: snapshot },
         signal: ctrl.signal,
+        fallbackError: `Save failed`,
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `Save failed: ${res.status}`);
-      }
       markSaved();
     } catch (err) {
       if (ctrl.signal.aborted) return;

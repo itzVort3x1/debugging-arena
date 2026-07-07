@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useArenaStore } from "@/store/arena";
+import { apiFetch } from "@/lib/api-client";
 import type { DebugSessionResponse } from "@/types/session";
 
 interface UseSessionResult {
@@ -38,18 +39,10 @@ export function useSession(challengeSlug: string | null): UseSessionResult {
             setIsLoading(true);
             setError(null);
             try {
-                const res = await fetch("/api/sessions", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ challengeSlug: slug }),
-                });
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(
-                        body.error ?? `Request failed: ${res.status}`,
-                    );
-                }
-                const data: DebugSessionResponse = await res.json();
+                const data = await apiFetch<DebugSessionResponse>(
+                    "/api/sessions",
+                    { method: "POST", json: { challengeSlug: slug } },
+                );
                 if (!cancelled) setSession(data);
             } catch (err) {
                 if (!cancelled) {

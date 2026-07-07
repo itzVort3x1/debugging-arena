@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { LockOutlineIcon } from "@/components/ui/icons";
+import { apiFetch } from "@/lib/api-client";
 import type { DebugSessionResponse } from "@/types/session";
 
 /**
@@ -49,16 +50,10 @@ export function HintPanel() {
         setPendingLevel(level);
         setError(null);
         try {
-            const res = await fetch(`/api/sessions/${session.id}/hints`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ level }),
-            });
-            if (!res.ok) {
-                const body = await res.json().catch(() => ({}));
-                throw new Error(body.error ?? `Failed: ${res.status}`);
-            }
-            const updated: DebugSessionResponse = await res.json();
+            const updated = await apiFetch<DebugSessionResponse>(
+                `/api/sessions/${session.id}/hints`,
+                { method: "POST", json: { level }, fallbackError: "Failed" },
+            );
             mergeSessionMeta(updated);
         } catch (err) {
             setError(
@@ -74,14 +69,10 @@ export function HintPanel() {
         setPendingSolution(true);
         setError(null);
         try {
-            const res = await fetch(`/api/sessions/${session.id}/solution`, {
-                method: "POST",
-            });
-            if (!res.ok) {
-                const body = await res.json().catch(() => ({}));
-                throw new Error(body.error ?? `Failed: ${res.status}`);
-            }
-            const updated: DebugSessionResponse = await res.json();
+            const updated = await apiFetch<DebugSessionResponse>(
+                `/api/sessions/${session.id}/solution`,
+                { method: "POST", fallbackError: "Failed" },
+            );
             mergeSessionMeta(updated);
         } catch (err) {
             setError(
