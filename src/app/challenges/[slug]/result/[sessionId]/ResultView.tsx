@@ -2,19 +2,12 @@ import Link from "next/link";
 import type { ChallengeDefinition } from "../../../../../../challenges/_schema";
 import type { DebugSessionResponse } from "@/types/session";
 import type { ScoreBreakdown } from "@/lib/scoring";
+import { formatDuration } from "@/lib/format";
 
 interface ResultViewProps {
     challenge: ChallengeDefinition;
     session: DebugSessionResponse;
     breakdown: ScoreBreakdown;
-}
-
-function formatDuration(seconds: number | null): string {
-    if (seconds === null) return "-";
-    if (seconds < 60) return `${seconds}s`;
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return s === 0 ? `${m}m` : `${m}m ${s}s`;
 }
 
 function scoreTone(score: number): {
