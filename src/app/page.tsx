@@ -1,65 +1,16 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import { TerminalCarousel } from "@/components/TerminalCarousel";
 import { SignOutButton } from "@/components/SignOutButton";
+import { Avatar } from "@/components/ui/Avatar";
+import { loadBestProgress, type ChallengeProgress } from "@/lib/dashboard";
 
 interface SessionUser {
     name: string | null;
     email: string | null;
-}
-
-/** Per-challenge progress for the signed-in user, keyed by slug. */
-interface ChallengeProgress {
-    status: "IN_PROGRESS" | "SUBMITTED";
-    score: number | null;
-    sessionId: string;
-}
-
-/**
- * Best session per challenge for the given user: a SUBMITTED session
- * (highest score wins) outranks an in-progress one. Drives the card badges.
- */
-async function loadProgress(
-    userId: string,
-): Promise<Record<string, ChallengeProgress>> {
-    const sessions = await prisma.debugSession.findMany({
-        where: { userId, status: { in: ["IN_PROGRESS", "SUBMITTED"] } },
-        select: {
-            challengeSlug: true,
-            status: true,
-            score: true,
-            startedAt: true,
-            id: true,
-        },
-        orderBy: { startedAt: "desc" },
-    });
-
-    const map: Record<string, ChallengeProgress> = {};
-    for (const s of sessions) {
-        const existing = map[s.challengeSlug];
-        const candidate: ChallengeProgress = {
-            status: s.status as "IN_PROGRESS" | "SUBMITTED",
-            score: s.score,
-            sessionId: s.id,
-        };
-        if (!existing) {
-            map[s.challengeSlug] = candidate;
-            continue;
-        }
-        // Prefer a submitted session; among submitted, the higher score.
-        const better =
-            (candidate.status === "SUBMITTED" &&
-                existing.status !== "SUBMITTED") ||
-            (candidate.status === "SUBMITTED" &&
-                existing.status === "SUBMITTED" &&
-                (candidate.score ?? 0) > (existing.score ?? 0));
-        if (better) map[s.challengeSlug] = candidate;
-    }
-    return map;
 }
 
 export default async function HomePage() {
@@ -73,7 +24,7 @@ export default async function HomePage() {
         : null;
 
     const progress = session?.user?.id
-        ? await loadProgress(session.user.id)
+        ? await loadBestProgress(session.user.id)
         : {};
 
     return (
@@ -166,23 +117,6 @@ function AuthedNav({ user }: { user: SessionUser }) {
             </div>
             <SignOutButton />
         </>
-    );
-}
-
-function Avatar({ label }: { label: string }) {
-    const initials = label
-        .split(/[\s@.]+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((s) => s[0]?.toUpperCase() ?? "")
-        .join("");
-    return (
-        <span
-            aria-hidden
-            className="flex h-5 w-5 items-center justify-center rounded-full bg-vscode-accent/20 text-[10px] font-semibold text-vscode-accent"
-        >
-            {initials || "?"}
-        </span>
     );
 }
 
