@@ -4,8 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import { TerminalCarousel } from "@/components/TerminalCarousel";
-import { SignOutButton } from "@/components/SignOutButton";
-import { Avatar } from "@/components/ui/Avatar";
+import { DashboardMenu } from "@/components/DashboardMenu";
 import { loadBestProgress, type ChallengeProgress } from "@/lib/dashboard";
 
 interface SessionUser {
@@ -100,7 +99,6 @@ function AnonNav() {
 }
 
 function AuthedNav({ user }: { user: SessionUser }) {
-    const label = user.name ?? user.email ?? "Account";
     return (
         <>
             <Link
@@ -109,13 +107,7 @@ function AuthedNav({ user }: { user: SessionUser }) {
             >
                 Challenges
             </Link>
-            <div className="inline-flex items-center gap-2 rounded-md border border-vscode-border bg-vscode-bg-elevated px-3 py-1.5">
-                <Avatar label={label} />
-                <span className="hidden max-w-[160px] truncate text-xs text-vscode-fg sm:inline">
-                    {label}
-                </span>
-            </div>
-            <SignOutButton />
+            <DashboardMenu user={user} />
         </>
     );
 }
