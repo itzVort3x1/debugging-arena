@@ -16,6 +16,7 @@ import {
     formatMonthYear,
     formatRelativeTime,
 } from "@/lib/format";
+import { displayName } from "@/lib/user";
 
 export const metadata: Metadata = {
     title: "Dashboard",
@@ -38,7 +39,7 @@ export default async function DashboardPage() {
 
     const name = user?.name ?? session.user.name ?? null;
     const email = user?.email ?? session.user.email ?? null;
-    const label = name ?? email ?? "Account";
+    const label = displayName({ name, email });
     const totalChallenges = getAllChallengeMeta().length;
 
     return (
