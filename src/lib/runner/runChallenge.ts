@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { materializeSandbox } from "./sandbox";
 import type { ChallengeDefinition } from "../../../challenges/_schema";
@@ -25,6 +26,15 @@ export interface RunHandlers {
 
 /** Hard ceiling so a runaway test can't pin a worker forever. */
 const RUN_TIMEOUT_MS = 30_000;
+
+/**
+ * Persistent jest cache, shared across runs and users. The sandbox itself is
+ * a throwaway temp dir, so without pinning the cache here jest would recompile
+ * every test file with ts-jest on every run. Cache entries are keyed by file
+ * content + config hash, so reuse is safe: identical test files (served from
+ * the registry) and identical user edits hit the cache; changed files miss.
+ */
+const JEST_CACHE_DIR = path.join(os.tmpdir(), "arena-jest-cache");
 
 /**
  * Materialize the challenge into a temp dir, spawn jest, and return the
@@ -70,6 +80,17 @@ export async function runChallenge(
                 "--outputFile",
                 resultFile,
                 "--colors",
+                // Run in the jest process itself - for a single small suite the
+                // worker fork/IPC overhead (especially on Windows) dwarfs the
+                // test time.
+                "--runInBand",
+                // Reuse ts-jest's compiled output across runs; the sandbox dir
+                // is deleted each time, so the cache must live outside it.
+                "--cacheDirectory",
+                JEST_CACHE_DIR,
+                // Stream each test name live so the terminal shows progress
+                // instead of dumping everything at the end.
+                "--verbose",
             ],
             {
                 cwd: sandbox.cwd,
