@@ -24,16 +24,16 @@ to the terminal panel over Server-Sent Events.
   even LTS ≤ 22.
 - A **long-running Node server** for production - see
   [Deployment](#deployment). This is **not** deployable to Vercel/serverless:
-  the runner spawns a Jest child process and writes to a temp dir on disk, and
-  SQLite needs a persistent file.
+  the runner spawns a Jest child process and writes to a temp dir on disk.
+- A **Supabase Postgres** database (any Postgres works, but the config assumes
+  Supabase's pooled + direct connection strings).
 
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env        # then fill in NEXTAUTH_SECRET
-npx prisma migrate dev      # create the SQLite db + apply migrations
-npm prisma deploy
+cp .env.example .env        # fill in DATABASE_URL + DIRECT_URL (Supabase) and NEXTAUTH_SECRET
+npx prisma migrate dev      # apply migrations to the Supabase Postgres db
 npm run dev
 ```
 
@@ -48,8 +48,10 @@ and a persistent disk - Render, Railway, Fly.io, a container, or a plain VPS.
 
 **Environment variables** (see `.env.example`):
 
-- `DATABASE_URL` - a SQLite path on a **persistent disk**, e.g.
-  `file:/data/prod.db`. Back this file up; it is your entire database.
+- `DATABASE_URL` - Supabase **pooled** connection string (port 6543,
+  `?pgbouncer=true`). Used by the app at runtime.
+- `DIRECT_URL` - Supabase **direct** connection string (port 5432). Used only
+  by `prisma migrate`.
 - `NEXTAUTH_URL` - your public origin, e.g. `https://arena.example.com`.
 - `NEXTAUTH_SECRET` - required.
 - `ANTHROPIC_API_KEY` - optional; only used by the AI postmortem (not shipped yet).

@@ -1,17 +1,19 @@
 // Debugging Arena - Prisma schema
-// SQLite for development. To switch to PostgreSQL later:
-//   1. Change `provider` to "postgresql"
-//   2. Update DATABASE_URL in .env
-//   3. Re-add `@db.Text` to long string fields and switch fileState back to Json
-//   4. Run `npx prisma migrate dev --name init`
+// PostgreSQL, hosted on Supabase. DATABASE_URL is the pooled (pgBouncer)
+// connection used at runtime; DIRECT_URL is the direct connection Prisma
+// uses for migrations. See .env.example for both.
+//
+// `fileState` stays a plain String: Postgres maps String -> unlimited `text`,
+// and the app JSON-encodes/decodes it by hand, so no `Json`/`@db.Text` needed.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
