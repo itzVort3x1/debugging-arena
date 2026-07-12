@@ -20,7 +20,12 @@ const TSCONFIG_CONTENT = JSON.stringify(
             skipLibCheck: true,
             strict: false,
             resolveJsonModule: true,
-            isolatedModules: false,
+            // Transpile each file in isolation (ts-jest's fast single-file
+            // path). Type-checking is already off (diagnostics: false), so
+            // this gives up no safety we have; it just skips the cross-file
+            // analysis. Caveat: forbids `const enum` and type re-exports
+            // without `export type`, which the small challenge files don't use.
+            isolatedModules: true,
         },
         include: ["**/*.ts"],
     },
