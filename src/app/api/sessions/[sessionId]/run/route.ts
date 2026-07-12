@@ -108,6 +108,16 @@ export const POST = route<RouteContext>(async (req, { params }) => {
                 signal: abortController.signal,
             };
 
+            // Immediate cue - the first ts-jest compile is silent for a few
+            // seconds, so without this the terminal looks frozen after the
+            // command echo. Gives the user instant confirmation the run began.
+            emit("stdout", {
+                chunk:
+                    parsedData.mode === "file"
+                        ? "Running file…\n"
+                        : "Compiling & running tests…\n",
+            });
+
             try {
                 if (parsedData.mode === "file") {
                     // Run a single file for its console output. No tests, no
