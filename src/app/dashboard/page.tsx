@@ -6,16 +6,21 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getChallenge, getAllChallengeMeta } from "@/lib/challenges/registry";
 import { loadDashboard, type DashboardSession } from "@/lib/dashboard";
+import { loadActivityCalendar } from "@/lib/activity";
 import type { Difficulty } from "@/types/challenge";
-import { Avatar } from "@/components/ui/Avatar";
+import {
+    ProgressRing,
+    type DifficultyProgress,
+} from "@/components/dashboard/ProgressRing";
+import { ProfileSidebar } from "@/components/dashboard/ProfileSidebar";
+import { SidebarSection } from "@/components/dashboard/SidebarSection";
+import { StatCountList } from "@/components/dashboard/StatCountList";
+import { BadgesCard } from "@/components/dashboard/BadgesCard";
+import { ContributionGraph } from "@/components/dashboard/ContributionGraph";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import {
-    formatDuration,
-    formatMonthYear,
-    formatRelativeTime,
-} from "@/lib/format";
+import { formatDuration, formatRelativeTime } from "@/lib/format";
 import { displayName } from "@/lib/user";
 
 export const metadata: Metadata = {
@@ -29,38 +34,104 @@ export default async function DashboardPage() {
         redirect(`/login?callbackUrl=${encodeURIComponent("/dashboard")}`);
     }
 
-    const [user, data] = await Promise.all([
+    const [user, data, activity] = await Promise.all([
         prisma.user.findUnique({
             where: { id: session.user.id },
             select: { name: true, email: true, createdAt: true },
         }),
         loadDashboard(session.user.id),
+        loadActivityCalendar(session.user.id),
     ]);
 
     const name = user?.name ?? session.user.name ?? null;
     const email = user?.email ?? session.user.email ?? null;
     const label = displayName({ name, email });
+
+    // Per-difficulty totals from the registry; solved counts from the user's
+    // best sessions. Order (easy/medium/hard) is enforced by ProgressRing.
+    const order: Difficulty[] = ["easy", "medium", "hard"];
+    const totals: Record<Difficulty, number> = { easy: 0, medium: 0, hard: 0 };
+    for (const m of getAllChallengeMeta()) totals[m.difficulty]++;
+    const solvedByDiff: Record<Difficulty, number> = {
+        easy: 0,
+        medium: 0,
+        hard: 0,
+    };
+    for (const s of data.solved) {
+        const c = getChallenge(s.slug);
+        if (c) solvedByDiff[c.meta.difficulty]++;
+    }
+    const byDifficulty: DifficultyProgress[] = order.map((difficulty) => ({
+        difficulty,
+        solved: solvedByDiff[difficulty],
+        total: totals[difficulty],
+    }));
     const totalChallenges = getAllChallengeMeta().length;
+
+    // Tech-stack breakdown across solved challenges (LeetCode's "Languages"
+    // panel analog). A challenge can contribute several stack labels.
+    const languageCounts = new Map<string, number>();
+    for (const s of data.solved) {
+        const c = getChallenge(s.slug);
+        if (!c) continue;
+        for (const tech of c.meta.stack) {
+            languageCounts.set(tech, (languageCounts.get(tech) ?? 0) + 1);
+        }
+    }
+    const languages = Array.from(languageCounts, ([label, count]) => ({
+        label,
+        count,
+    })).sort((a, b) => b.count - a.count);
+
+    const headerName = name ?? email ?? "Your dashboard";
+    const username = name ? email : null;
 
     return (
         <div className="min-h-screen bg-vscode-bg text-vscode-fg">
-            <div className="mx-auto max-w-5xl px-6 py-10">
+            <div className="mx-auto max-w-6xl px-6 py-10">
                 <TopBar />
-                <IdentityHeader
-                    label={label}
-                    name={name}
-                    email={email}
-                    createdAt={user?.createdAt ?? null}
-                />
-                <StatStrip
-                    solvedCount={data.stats.solvedCount}
-                    totalChallenges={totalChallenges}
-                    avgScore={data.stats.avgScore}
-                    totalTimeSeconds={data.stats.totalTimeSeconds}
-                />
+                <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+                    <ProfileSidebar
+                        label={label}
+                        name={headerName}
+                        username={username}
+                    >
+                        <SidebarSection title="Languages">
+                            <StatCountList
+                                items={languages}
+                                unit="solved"
+                                emptyLabel="Solve a challenge to see your stack."
+                            />
+                        </SidebarSection>
+                    </ProfileSidebar>
 
-                <ContinueSection sessions={data.inProgress} />
-                <SolvedSection sessions={data.solved} />
+                    <div className="flex flex-col gap-8">
+                        <div className="grid gap-6 xl:grid-cols-2">
+                            <div className="rounded-lg border border-vscode-border bg-vscode-bg-elevated/40 px-6 py-6">
+                                <ProgressRing
+                                    solved={data.stats.solvedCount}
+                                    total={totalChallenges}
+                                    attempting={data.stats.inProgressCount}
+                                    byDifficulty={byDifficulty}
+                                />
+                            </div>
+                            <BadgesCard />
+                        </div>
+                        <div className="rounded-lg border border-vscode-border bg-vscode-bg-elevated/40 px-6 py-6">
+                            <ContributionGraph
+                                counts={activity.counts}
+                                total={activity.total}
+                                unit="submission"
+                            />
+                        </div>
+                        <StatStrip
+                            avgScore={data.stats.avgScore}
+                            totalTimeSeconds={data.stats.totalTimeSeconds}
+                        />
+                        <ContinueSection sessions={data.inProgress} />
+                        <SolvedSection sessions={data.solved} />
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -82,53 +153,16 @@ function TopBar() {
     );
 }
 
-function IdentityHeader({
-    label,
-    name,
-    email,
-    createdAt,
-}: {
-    label: string;
-    name: string | null;
-    email: string | null;
-    createdAt: Date | null;
-}) {
-    return (
-        <header className="flex items-center gap-4">
-            <Avatar label={label} size="lg" />
-            <div className="min-w-0">
-                <h1 className="truncate text-2xl font-bold tracking-tight text-vscode-fg">
-                    {name ?? email ?? "Your dashboard"}
-                </h1>
-                <p className="mt-0.5 truncate text-sm text-vscode-fg-muted">
-                    {name && email ? email : null}
-                    {createdAt ? (
-                        <span className="text-vscode-fg-subtle">
-                            {name && email ? " · " : ""}
-                            Member since {formatMonthYear(createdAt)}
-                        </span>
-                    ) : null}
-                </p>
-            </div>
-        </header>
-    );
-}
-
 // ---------------------- stat strip ----------------------
 
 function StatStrip({
-    solvedCount,
-    totalChallenges,
     avgScore,
     totalTimeSeconds,
 }: {
-    solvedCount: number;
-    totalChallenges: number;
     avgScore: number | null;
     totalTimeSeconds: number;
 }) {
     const stats = [
-        { label: "Solved", value: `${solvedCount} / ${totalChallenges}` },
         { label: "Avg score", value: avgScore === null ? "-" : `${avgScore}` },
         {
             label: "Time debugging",
@@ -137,7 +171,7 @@ function StatStrip({
         },
     ];
     return (
-        <div className="mt-6 grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
             {stats.map((s) => (
                 <div
                     key={s.label}
@@ -159,7 +193,7 @@ function StatStrip({
 
 function ContinueSection({ sessions }: { sessions: DashboardSession[] }) {
     return (
-        <section className="mt-12">
+        <section>
             <SectionHeading
                 title="Continue where you left off"
                 count={sessions.length}
@@ -179,7 +213,11 @@ function ContinueSection({ sessions }: { sessions: DashboardSession[] }) {
             ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                     {sessions.map((s) => (
-                        <SessionCard key={s.sessionId} session={s} kind="resume" />
+                        <SessionCard
+                            key={s.sessionId}
+                            session={s}
+                            kind="resume"
+                        />
                     ))}
                 </div>
             )}
@@ -189,18 +227,22 @@ function ContinueSection({ sessions }: { sessions: DashboardSession[] }) {
 
 function SolvedSection({ sessions }: { sessions: DashboardSession[] }) {
     return (
-        <section className="mt-12">
+        <section>
             <SectionHeading title="Solved" count={sessions.length} />
             {sessions.length === 0 ? (
                 <Card className="border-vscode-border">
                     <EmptyState className="h-auto py-8">
-                        Nothing solved yet — your wins will show up here.
+                        Nothing solved yet - your wins will show up here.
                     </EmptyState>
                 </Card>
             ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                     {sessions.map((s) => (
-                        <SessionCard key={s.sessionId} session={s} kind="solved" />
+                        <SessionCard
+                            key={s.sessionId}
+                            session={s}
+                            kind="solved"
+                        />
                     ))}
                 </div>
             )}
@@ -276,7 +318,9 @@ function SessionCard({
                     <>
                         <span>{formatDuration(session.timeTaken)}</span>
                         {session.completedAt ? (
-                            <span>{formatRelativeTime(session.completedAt)}</span>
+                            <span>
+                                {formatRelativeTime(session.completedAt)}
+                            </span>
                         ) : null}
                     </>
                 ) : (
