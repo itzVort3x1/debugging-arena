@@ -1,0 +1,28 @@
+{
+  "hints": [
+    {
+      "level": 1,
+      "title": "Which function is wrong?",
+      "content": "The failing tests are all `apply_discount` cases; `add_tax` and `cart_total` pass. Focus only on `apply_discount`.",
+      "penaltyPoints": 5
+    },
+    {
+      "level": 2,
+      "title": "What does `percent` mean here?",
+      "content": "`percent` is a whole number: 20 means 20%, i.e. the fraction 20/100 = 0.2. Trace `apply_discount(100, 20)` by hand with the current code — you'll get 100 - 100*20 = -1900, which matches the bug report.",
+      "penaltyPoints": 10
+    },
+    {
+      "level": 3,
+      "title": "Convert the percentage to a fraction",
+      "content": "A percentage has to be divided by 100 before it's multiplied into the price. The discount amount is `price * (percent / 100)`.",
+      "penaltyPoints": 15
+    },
+    {
+      "level": 4,
+      "title": "Solution outline",
+      "content": "```python\ndef apply_discount(price, percent):\n    return price - price * (percent / 100)\n```\n`apply_discount(100, 20)` → 100 - 100*0.2 = 80.",
+      "penaltyPoints": 25
+    }
+  ]
+}

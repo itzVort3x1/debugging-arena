@@ -1,0 +1,10 @@
+{
+  "slug": "python-discount-bug",
+  "title": "Checkout Applies the Wrong Discount",
+  "difficulty": "easy",
+  "tags": ["python", "pytest", "pricing", "math"],
+  "timeLimit": 900,
+  "stack": ["Python", "pytest"],
+  "issueContext": "A 20% coupon is wiping out the entire order total (and then some)",
+  "runtime": "python"
+}
