@@ -3,11 +3,14 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { HttpError, route } from "@/lib/api/http";
 import { parseJsonBody, requireUserId } from "@/lib/api/guards";
-import { getChallenge } from "@/lib/challenges/registry";
+import { getChallenge, getChallengeLanguages } from "@/lib/challenges/registry";
 import { serializeSession } from "@/lib/sessions";
+import type { Runtime } from "../../../../challenges/_schema";
 
 const CreateSessionSchema = z.object({
     challengeSlug: z.string().min(1).max(100),
+    /** Language variant to solve in. Defaults to the challenge's default. */
+    language: z.string().min(1).max(20).optional(),
 });
 
 /**
@@ -20,18 +23,41 @@ const CreateSessionSchema = z.object({
  */
 export const POST = route(async (req: Request) => {
     const userId = await requireUserId();
-    const { challengeSlug } = await parseJsonBody(req, CreateSessionSchema);
+    const { challengeSlug, language } = await parseJsonBody(
+        req,
+        CreateSessionSchema,
+    );
 
     // A missing challenge here is a bad client-supplied slug, so 404 (unlike
     // the 500 used when a stored session references an unregistered slug).
-    const challenge = getChallenge(challengeSlug);
+    const languages = getChallengeLanguages(challengeSlug);
+    if (!languages) {
+        throw new HttpError(404, "Challenge not found");
+    }
+    if (language && !languages.includes(language as Runtime)) {
+        throw new HttpError(
+            400,
+            `Challenge "${challengeSlug}" does not support language "${language}"`,
+        );
+    }
+
+    // Resolve the variant: the requested language, or the challenge's default.
+    const challenge = getChallenge(challengeSlug, language as Runtime | undefined);
     if (!challenge) {
         throw new HttpError(404, "Challenge not found");
     }
+    const resolvedLanguage = challenge.meta.runtime!;
 
-    // Resume the most recent IN_PROGRESS session if any.
+    // Resume the most recent IN_PROGRESS session for THIS language if any.
+    // Each language is an independent attempt, so a JS session and a Python
+    // session on the same challenge coexist.
     const existing = await prisma.debugSession.findFirst({
-        where: { userId, challengeSlug, status: "IN_PROGRESS" },
+        where: {
+            userId,
+            challengeSlug,
+            language: resolvedLanguage,
+            status: "IN_PROGRESS",
+        },
         orderBy: { startedAt: "desc" },
         include: { hintRequests: { select: { level: true } } },
     });
@@ -39,7 +65,7 @@ export const POST = route(async (req: Request) => {
         return NextResponse.json(serializeSession(existing), { status: 200 });
     }
 
-    // Seed fileState with the challenge's editable files at their starting
+    // Seed fileState with the variant's editable files at their starting
     // contents. Read-only test files are NOT included - they're served from
     // the registry, never persisted per-session.
     const seededFileState: Record<string, string> = {};
@@ -51,6 +77,7 @@ export const POST = route(async (req: Request) => {
         data: {
             userId,
             challengeSlug,
+            language: resolvedLanguage,
             status: "IN_PROGRESS",
             fileState: JSON.stringify(seededFileState),
         },

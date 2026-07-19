@@ -36,6 +36,7 @@ export function serializeSession(
     id: s.id,
     userId: s.userId,
     challengeSlug: s.challengeSlug,
+    language: s.language,
     status: s.status as SessionStatus,
     startedAt: s.startedAt.toISOString(),
     completedAt: s.completedAt ? s.completedAt.toISOString() : null,

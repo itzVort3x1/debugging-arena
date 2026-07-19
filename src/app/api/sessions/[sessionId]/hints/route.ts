@@ -45,7 +45,7 @@ export const POST = route<RouteContext>(async (req, { params }) => {
         ),
     );
 
-    const challenge = requireChallenge(session.challengeSlug);
+    const challenge = requireChallenge(session.challengeSlug, session.language);
     // The requested level must actually exist for this challenge.
     if (!challenge.hints.some((h) => h.level === level)) {
         throw new HttpError(
