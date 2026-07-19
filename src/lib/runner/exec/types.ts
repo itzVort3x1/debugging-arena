@@ -16,6 +16,8 @@ export interface RunHandlers {
     onStderr?: (chunk: string) => void;
     /** When this signal aborts, the running process (or container) is killed. */
     signal?: AbortSignal;
+    /** Called once if the run has to wait for a free slot (see concurrency). */
+    onQueued?: () => void;
 }
 
 /** A process to spawn: executable + args + extra env (merged, never leaked). */

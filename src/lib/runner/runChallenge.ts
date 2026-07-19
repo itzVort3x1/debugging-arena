@@ -1,6 +1,7 @@
 import { materializeSandbox } from "./sandbox";
 import { getRunner } from "./languages/registry";
 import { selectExecutor } from "./exec/select";
+import { runLimiter } from "./concurrency";
 import type { RunHandlers } from "./exec/types";
 import type { ChallengeDefinition } from "../../../challenges/_schema";
 
@@ -32,45 +33,64 @@ const RUN_TIMEOUT_MS = 30_000;
  *
  * This function only orchestrates the sandbox lifecycle and normalizes into
  * RunResult; timeout, abort, and streaming live in the executor.
+ *
+ * Admission-gated: acquires a run slot before doing any work (so queued
+ * requests don't each create a sandbox or container), and releases it when
+ * done. Rejects with `RunnerBusyError` if the queue is full. See concurrency.
  */
 export async function runChallenge(
     challenge: ChallengeDefinition,
     fileState: Record<string, string>,
     handlers: RunHandlers = {},
 ): Promise<RunResult> {
-    const runner = getRunner(challenge.meta.runtime);
-    const executor = selectExecutor();
-    const env = executor.env();
-
-    const scaffoldFiles = runner.scaffold(challenge, fileState, env);
-    const sandbox = await materializeSandbox(challenge, fileState, scaffoldFiles);
-    const start = Date.now();
+    // Wait for a free slot before materializing anything. May reject with
+    // RunnerBusyError (queue full) or AbortError (client left while queued).
+    const release = await runLimiter.acquire({
+        signal: handlers.signal,
+        onQueued: handlers.onQueued,
+    });
 
     try {
-        const command = runner.command(env, executor.workDir(sandbox.cwd));
-        const { exitCode, stdout, stderr } = await executor.run({
-            image: runner.image,
-            command,
-            sandboxDir: sandbox.cwd,
-            handlers,
-            timeoutMs: RUN_TIMEOUT_MS,
-        });
+        const runner = getRunner(challenge.meta.runtime);
+        const executor = selectExecutor();
+        const env = executor.env();
 
-        const { passed, failed, total } = await runner.parseResults(
-            sandbox.cwd,
-            stdout,
+        const scaffoldFiles = runner.scaffold(challenge, fileState, env);
+        const sandbox = await materializeSandbox(
+            challenge,
+            fileState,
+            scaffoldFiles,
         );
+        const start = Date.now();
 
-        return {
-            stdout,
-            stderr,
-            exitCode,
-            passed,
-            failed,
-            total,
-            durationMs: Date.now() - start,
-        };
+        try {
+            const command = runner.command(env, executor.workDir(sandbox.cwd));
+            const { exitCode, stdout, stderr } = await executor.run({
+                image: runner.image,
+                command,
+                sandboxDir: sandbox.cwd,
+                handlers,
+                timeoutMs: RUN_TIMEOUT_MS,
+            });
+
+            const { passed, failed, total } = await runner.parseResults(
+                sandbox.cwd,
+                stdout,
+            );
+
+            return {
+                stdout,
+                stderr,
+                exitCode,
+                passed,
+                failed,
+                total,
+                durationMs: Date.now() - start,
+            };
+        } finally {
+            await sandbox.cleanup();
+        }
     } finally {
-        await sandbox.cleanup();
+        release();
     }
 }

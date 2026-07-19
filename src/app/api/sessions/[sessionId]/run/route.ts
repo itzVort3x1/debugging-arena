@@ -106,6 +106,12 @@ export const POST = route<RouteContext>(async (req, { params }) => {
                 onStdout: (chunk: string) => emit("stdout", { chunk }),
                 onStderr: (chunk: string) => emit("stderr", { chunk }),
                 signal: abortController.signal,
+                // The runner is at capacity; tell the user we're waiting for a
+                // slot instead of leaving the terminal looking frozen.
+                onQueued: () =>
+                    emit("stdout", {
+                        chunk: "Waiting for an available runner…\n",
+                    }),
             };
 
             // Immediate cue - the first ts-jest compile is silent for a few

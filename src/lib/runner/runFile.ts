@@ -3,6 +3,7 @@ import path from "node:path";
 import { materializeSandbox } from "./sandbox";
 import { nodeRunner } from "./languages/node";
 import { hostExecutor } from "./exec/host";
+import { runLimiter } from "./concurrency";
 import type { ChallengeDefinition } from "../../../challenges/_schema";
 
 export interface RunFileResult {
@@ -19,6 +20,8 @@ export interface RunFileHandlers {
     onStderr?: (chunk: string) => void;
     /** When this signal aborts, the child process is killed. */
     signal?: AbortSignal;
+    /** Called once if the run has to wait for a free slot (see concurrency). */
+    onQueued?: () => void;
 }
 
 /** Hard ceiling so a runaway script can't pin a worker forever. */
@@ -44,6 +47,25 @@ export async function runFile(
     fileState: Record<string, string>,
     entryPath: string,
     handlers: RunFileHandlers = {},
+): Promise<RunFileResult> {
+    // Same admission gate as runChallenge — a single-file run still spawns a
+    // process, so it shares the concurrency budget and can't bypass the cap.
+    const release = await runLimiter.acquire({
+        signal: handlers.signal,
+        onQueued: handlers.onQueued,
+    });
+    try {
+        return await runFileInner(challenge, fileState, entryPath, handlers);
+    } finally {
+        release();
+    }
+}
+
+async function runFileInner(
+    challenge: ChallengeDefinition,
+    fileState: Record<string, string>,
+    entryPath: string,
+    handlers: RunFileHandlers,
 ): Promise<RunFileResult> {
     const projectRoot = process.cwd();
     // ts-node's register hook, by absolute path. `-r` accepts an absolute

@@ -10,6 +10,7 @@ import {
     requireUserId,
 } from "@/lib/api/guards";
 import { runChallenge } from "@/lib/runner/runChallenge";
+import { RunnerBusyError } from "@/lib/runner/concurrency";
 import { computeScore } from "@/lib/scoring";
 import { serializeSession } from "@/lib/sessions";
 
@@ -66,6 +67,10 @@ export const POST = route<RouteContext>(async (req, { params }) => {
     try {
         result = await runChallenge(challenge, fileState);
     } catch (err) {
+        // Runner at capacity → 503 so the client knows to retry, not a 500.
+        if (err instanceof RunnerBusyError) {
+            throw new HttpError(503, err.message);
+        }
         throw new HttpError(
             500,
             err instanceof Error
