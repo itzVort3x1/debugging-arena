@@ -1,16 +1,7 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
-import type { LanguageRunner, RunCommand, TestCounts } from "./types";
-
-/**
- * Persistent jest cache, shared across runs and users. The sandbox itself is
- * a throwaway temp dir, so without pinning the cache here jest would recompile
- * every test file with ts-jest on every run. Cache entries are keyed by file
- * content + config hash, so reuse is safe: identical test files (served from
- * the registry) and identical user edits hit the cache; changed files miss.
- */
-const JEST_CACHE_DIR = path.join(os.tmpdir(), "arena-jest-cache");
+import type { ExecEnv, RunCommand } from "../exec/types";
+import type { LanguageRunner, TestCounts } from "./types";
 
 /** Jest's machine-readable output, written here and read back by parseResults. */
 const RESULT_FILE = ".jest-result.json";
@@ -41,7 +32,8 @@ const TSCONFIG_CONTENT = JSON.stringify(
 /**
  * Build a jest.config.js for the sandbox that resolves ts-jest by
  * absolute path. The sandbox has no node_modules, so without this jest's
- * own resolver would fail to find the transformer.
+ * own resolver would fail to find the transformer. The path differs by
+ * executor (host node_modules vs the image's), hence it comes from ExecEnv.
  */
 function buildJestConfig(tsJestAbsPath: string): string {
     // `diagnostics: false` - skip ts-jest's type-checking. We don't ship
@@ -62,50 +54,41 @@ function buildJestConfig(tsJestAbsPath: string): string {
 `;
 }
 
-/** Absolute path to ts-jest inside the app's own node_modules. */
-function tsJestPath(): string {
-    return path.join(process.cwd(), "node_modules", "ts-jest");
+/** Join a sandbox-relative path onto workDir with forward slashes. */
+function inWorkDir(workDir: string, rel: string): string {
+    // Forward slashes work for both the container's POSIX /work and Node on
+    // Windows (which accepts `/` in paths), so we avoid path.win32/posix
+    // branching on the executor.
+    return `${workDir}/${rel}`;
 }
 
 /**
  * The original jest-based runner, now the first entry in the language
- * registry. Runtime "node" (the default) resolves to this.
- *
- * jest and ts-jest are resolved from the app's own node_modules by absolute
- * path so the sandbox doesn't need its own; both are dependencies.
+ * registry. Runtime "node" (the default) resolves to this. It runs under
+ * either executor: on the host, or inside the arena-node image.
  */
 export const nodeRunner: LanguageRunner = {
-    scaffold() {
+    image: "arena-node",
+
+    scaffold(_challenge, _fileState, env: ExecEnv) {
         return {
-            "jest.config.js": buildJestConfig(tsJestPath()),
+            "jest.config.js": buildJestConfig(env.tsJestPath),
             "tsconfig.json": TSCONFIG_CONTENT,
         };
     },
 
-    command(sandboxDir: string): RunCommand {
-        // Resolve jest from the app's own node_modules via a filesystem path so
-        // the sandbox doesn't need its own. A direct path sidesteps next/
-        // webpack's module resolver (which honours package.json#exports and
-        // refuses jest/bin/jest.js since it isn't exported).
-        const jestBin = path.join(
-            process.cwd(),
-            "node_modules",
-            "jest",
-            "bin",
-            "jest.js",
-        );
-
+    command(env: ExecEnv, workDir: string): RunCommand {
         return {
-            cmd: process.execPath,
+            cmd: env.nodeExec,
             args: [
-                jestBin,
+                env.jestBin,
                 "--rootDir",
-                sandboxDir,
+                workDir,
                 "--config",
-                path.join(sandboxDir, "jest.config.js"),
+                inWorkDir(workDir, "jest.config.js"),
                 "--json",
                 "--outputFile",
-                path.join(sandboxDir, RESULT_FILE),
+                inWorkDir(workDir, RESULT_FILE),
                 "--colors",
                 // Run in the jest process itself - for a single small suite the
                 // worker fork/IPC overhead (especially on Windows) dwarfs the
@@ -114,7 +97,7 @@ export const nodeRunner: LanguageRunner = {
                 // Reuse ts-jest's compiled output across runs; the sandbox dir
                 // is deleted each time, so the cache must live outside it.
                 "--cacheDirectory",
-                JEST_CACHE_DIR,
+                env.cacheDir,
                 // Stream each test name live so the terminal shows progress
                 // instead of dumping everything at the end.
                 "--verbose",
@@ -128,6 +111,8 @@ export const nodeRunner: LanguageRunner = {
 
     async parseResults(sandboxDir: string): Promise<TestCounts> {
         try {
+            // The container bind-mounts sandboxDir at /work, so the result file
+            // jest wrote inside it is here on the host too.
             const raw = await fs.readFile(
                 path.join(sandboxDir, RESULT_FILE),
                 "utf-8",

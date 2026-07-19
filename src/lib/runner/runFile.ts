@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { materializeSandbox } from "./sandbox";
 import { nodeRunner } from "./languages/node";
+import { hostExecutor } from "./exec/host";
 import type { ChallengeDefinition } from "../../../challenges/_schema";
 
 export interface RunFileResult {
@@ -33,6 +34,10 @@ const RUN_TIMEOUT_MS = 30_000;
  * sandbox (which has no node_modules) can still load it via `-r`. Type errors
  * are ignored (TS_NODE_TRANSPILE_ONLY) so the file runs the same way the jest
  * path runs with `diagnostics: false`.
+ *
+ * NOTE: unlike `runChallenge`, this debugging path is not yet containerized —
+ * it always runs on the host and inherits its environment. Isolating it is a
+ * follow-up; the scored test path is the one Phase 2 secures.
  */
 export async function runFile(
     challenge: ChallengeDefinition,
@@ -51,13 +56,13 @@ export async function runFile(
         "register",
     );
 
-    // This "run one .ts file" path is inherently Node-specific, so it reuses
-    // the Node runner's scaffold for the sandbox's tsconfig.json (which pins
-    // ts-node's compiler options below).
+    // This "run one .ts file" path is inherently Node-specific and host-only,
+    // so it reuses the Node runner's scaffold (host paths) for the sandbox's
+    // tsconfig.json, which pins ts-node's compiler options below.
     const sandbox = await materializeSandbox(
         challenge,
         fileState,
-        nodeRunner.scaffold(challenge, fileState),
+        nodeRunner.scaffold(challenge, fileState, hostExecutor.env()),
     );
     const entryAbs = path.join(sandbox.cwd, entryPath);
     // The sandbox writes its own commonjs tsconfig. Pin ts-node to it so it
