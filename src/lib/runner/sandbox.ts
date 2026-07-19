@@ -10,67 +10,23 @@ export interface Sandbox {
     cleanup: () => Promise<void>;
 }
 
-const TSCONFIG_CONTENT = JSON.stringify(
-    {
-        compilerOptions: {
-            target: "es2020",
-            module: "commonjs",
-            moduleResolution: "node",
-            esModuleInterop: true,
-            skipLibCheck: true,
-            strict: false,
-            resolveJsonModule: true,
-            // Transpile each file in isolation (ts-jest's fast single-file
-            // path). Type-checking is already off (diagnostics: false), so
-            // this gives up no safety we have; it just skips the cross-file
-            // analysis. Caveat: forbids `const enum` and type re-exports
-            // without `export type`, which the small challenge files don't use.
-            isolatedModules: true,
-        },
-        include: ["**/*.ts"],
-    },
-    null,
-    2,
-);
-
-/**
- * Build a jest.config.js for the sandbox that resolves ts-jest by
- * absolute path. The sandbox has no node_modules, so without this jest's
- * own resolver would fail to find the transformer.
- */
-function buildJestConfig(tsJestAbsPath: string): string {
-    // `diagnostics: false` - skip ts-jest's type-checking. We don't ship
-    // @types/jest in the sandbox tsconfig, and jest globals (describe/it/
-    // expect) are injected at runtime regardless. Tests still run; we just
-    // don't compile-fail on missing ambient types.
-    return `module.exports = {
-  testEnvironment: "node",
-  testMatch: ["**/tests/**/*.test.ts"],
-  rootDir: __dirname,
-  transform: {
-    "^.+\\\\.tsx?$": [
-      ${JSON.stringify(tsJestAbsPath)},
-      { tsconfig: "./tsconfig.json", diagnostics: false },
-    ],
-  },
-};
-`;
-}
-
 /**
  * Materialize a working copy of a challenge into a fresh temp directory:
  *
- *   - `fileState`        → editable working files (user's edits)
- *   - `challenge.testFiles` → read-only tests (from the challenge spec)
- *   - jest.config.js + tsconfig.json
+ *   - `fileState`            → editable working files (user's edits)
+ *   - `challenge.testFiles`  → read-only tests (from the challenge spec)
+ *   - `scaffoldFiles`        → runtime-specific config (jest.config.js,
+ *                              tsconfig.json, requirements.txt, …), provided
+ *                              by the LanguageRunner for this challenge.
  *
- * Test files are written AFTER fileState so they cannot be overwritten
- * by a malformed fileState that happens to include a `tests/...` key.
+ * Test and scaffold files are written AFTER fileState so they cannot be
+ * overwritten by a malformed fileState that includes a colliding key (e.g. a
+ * `tests/...` path or a `jest.config.js`).
  */
 export async function materializeSandbox(
     challenge: ChallengeDefinition,
     fileState: Record<string, string>,
-    tsJestAbsPath: string,
+    scaffoldFiles: Record<string, string> = {},
 ): Promise<Sandbox> {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "arena-run-"));
 
@@ -80,8 +36,9 @@ export async function materializeSandbox(
     for (const f of challenge.testFiles) {
         await writeRelative(cwd, f.path, f.content);
     }
-    await writeRelative(cwd, "jest.config.js", buildJestConfig(tsJestAbsPath));
-    await writeRelative(cwd, "tsconfig.json", TSCONFIG_CONTENT);
+    for (const [relPath, content] of Object.entries(scaffoldFiles)) {
+        await writeRelative(cwd, relPath, content);
+    }
 
     return {
         cwd,

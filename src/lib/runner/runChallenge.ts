@@ -1,8 +1,6 @@
 import { spawn } from "node:child_process";
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import { materializeSandbox } from "./sandbox";
+import { getRunner } from "./languages/registry";
 import type { ChallengeDefinition } from "../../../challenges/_schema";
 
 export interface RunResult {
@@ -28,79 +26,35 @@ export interface RunHandlers {
 const RUN_TIMEOUT_MS = 30_000;
 
 /**
- * Persistent jest cache, shared across runs and users. The sandbox itself is
- * a throwaway temp dir, so without pinning the cache here jest would recompile
- * every test file with ts-jest on every run. Cache entries are keyed by file
- * content + config hash, so reuse is safe: identical test files (served from
- * the registry) and identical user edits hit the cache; changed files miss.
- */
-const JEST_CACHE_DIR = path.join(os.tmpdir(), "arena-jest-cache");
-
-/**
- * Materialize the challenge into a temp dir, spawn jest, and return the
- * structured result once the child exits. If `handlers.onStdout` /
+ * Materialize the challenge into a temp dir, run its test suite, and return
+ * the structured result once the child exits. If `handlers.onStdout` /
  * `onStderr` are provided, chunks are delivered live for SSE streaming.
  *
- * jest and ts-jest are resolved from the app's own node_modules so the
- * sandbox doesn't need its own. Both are devDependencies.
+ * The framework-specific work (scaffolding, invocation, output parsing) is
+ * delegated to the LanguageRunner selected by `challenge.meta.runtime`
+ * (defaults to "node" → jest). This function only orchestrates the sandbox
+ * lifecycle, streaming, timeout, and abort, and normalizes into RunResult.
  */
 export async function runChallenge(
     challenge: ChallengeDefinition,
     fileState: Record<string, string>,
     handlers: RunHandlers = {},
 ): Promise<RunResult> {
-    // Resolve from the app's own node_modules via filesystem paths so the
-    // sandbox doesn't need its own. Direct paths sidestep next/webpack's
-    // module resolver (which honours package.json#exports and refuses
-    // jest/bin/jest.js since it isn't exported).
-    const projectRoot = process.cwd();
-    const jestBin = path.join(
-        projectRoot,
-        "node_modules",
-        "jest",
-        "bin",
-        "jest.js",
+    const runner = getRunner(challenge.meta.runtime);
+    const scaffoldFiles = runner.scaffold(challenge, fileState);
+    const sandbox = await materializeSandbox(
+        challenge,
+        fileState,
+        scaffoldFiles,
     );
-    const tsJestPath = path.join(projectRoot, "node_modules", "ts-jest");
-
-    const sandbox = await materializeSandbox(challenge, fileState, tsJestPath);
-    const resultFile = path.join(sandbox.cwd, ".jest-result.json");
     const start = Date.now();
 
     try {
-        const proc = spawn(
-            process.execPath,
-            [
-                jestBin,
-                "--rootDir",
-                sandbox.cwd,
-                "--config",
-                path.join(sandbox.cwd, "jest.config.js"),
-                "--json",
-                "--outputFile",
-                resultFile,
-                "--colors",
-                // Run in the jest process itself - for a single small suite the
-                // worker fork/IPC overhead (especially on Windows) dwarfs the
-                // test time.
-                "--runInBand",
-                // Reuse ts-jest's compiled output across runs; the sandbox dir
-                // is deleted each time, so the cache must live outside it.
-                "--cacheDirectory",
-                JEST_CACHE_DIR,
-                // Stream each test name live so the terminal shows progress
-                // instead of dumping everything at the end.
-                "--verbose",
-            ],
-            {
-                cwd: sandbox.cwd,
-                env: {
-                    ...process.env,
-                    CI: "true",
-                    FORCE_COLOR: "1",
-                },
-            },
-        );
+        const { cmd, args, env } = runner.command(sandbox.cwd);
+        const proc = spawn(cmd, args, {
+            cwd: sandbox.cwd,
+            env: { ...process.env, ...env },
+        });
 
         let stdout = "";
         let stderr = "";
@@ -135,19 +89,10 @@ export async function runChallenge(
             });
         });
 
-        let passed = 0;
-        let failed = 0;
-        let total = 0;
-        try {
-            const raw = await fs.readFile(resultFile, "utf-8");
-            const parsed = JSON.parse(raw);
-            passed = parsed.numPassedTests ?? 0;
-            failed = parsed.numFailedTests ?? 0;
-            total = parsed.numTotalTests ?? 0;
-        } catch {
-            // Jest crashed before writing the result file - stdout/stderr will
-            // already have the failure reason.
-        }
+        const { passed, failed, total } = await runner.parseResults(
+            sandbox.cwd,
+            stdout,
+        );
 
         return {
             stdout,

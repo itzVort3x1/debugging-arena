@@ -33,6 +33,9 @@ const EXT_TO_LANGUAGE: Record<string, string> = {
   ".md": "markdown",
   ".html": "html",
   ".css": "css",
+  ".py": "python",
+  ".go": "go",
+  ".rs": "rust",
 };
 
 function languageFromPath(filePath: string): string {
