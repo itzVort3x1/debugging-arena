@@ -72,6 +72,10 @@ model DebugSession {
   id            String        @id @default(cuid())
   userId        String
   challengeSlug String
+  // Language variant this session solves the challenge in (a Runtime value).
+  // A challenge is one session per (userId, challengeSlug, language), so the
+  // same challenge can be solved independently in each language it offers.
+  language      String        @default("node")
   status        String        @default("IN_PROGRESS") // SessionStatus enum (string for SQLite)
   startedAt     DateTime      @default(now())
   completedAt   DateTime?
@@ -95,7 +99,7 @@ model DebugSession {
   hintRequests HintRequest[]
   postmortem   Postmortem?
 
-  @@index([userId, challengeSlug])
+  @@index([userId, challengeSlug, language])
 }
 
 // SessionStatus values: IN_PROGRESS | SUBMITTED | COMPLETED | ABANDONED

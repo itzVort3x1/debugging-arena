@@ -59,7 +59,7 @@ export const POST = route<RouteContext>(async (req, { params }) => {
         ),
     );
 
-    const challenge = requireChallenge(session.challengeSlug);
+    const challenge = requireChallenge(session.challengeSlug, session.language);
 
     // For a file run, the entry must be one of the challenge's editable files.
     // This blocks executing an arbitrary path or a read-only test file.

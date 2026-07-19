@@ -54,7 +54,7 @@ export const POST = route<RouteContext>(async (req, { params }) => {
         "Session has already been submitted",
     );
 
-    const challenge = requireChallenge(session.challengeSlug);
+    const challenge = requireChallenge(session.challengeSlug, session.language);
 
     // Persist the submitted buffer before verifying (implicit autosave flush).
     await prisma.debugSession.update({

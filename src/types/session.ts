@@ -8,6 +8,8 @@ export interface DebugSessionResponse {
     id: string;
     userId: string;
     challengeSlug: string;
+    /** Language variant this session is solved in (a Runtime value). */
+    language: string;
     status: SessionStatus;
     /** ISO 8601 string. */
     startedAt: string;
