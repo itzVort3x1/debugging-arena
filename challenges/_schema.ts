@@ -4,6 +4,13 @@
 
 export type Difficulty = "easy" | "medium" | "hard";
 
+/**
+ * Execution runtime a challenge's tests run under. Selects the LanguageRunner
+ * (see src/lib/runner/languages). Only "node" is implemented today; the rest
+ * are declared so meta.json can name them ahead of their runners landing.
+ */
+export type Runtime = "node" | "python" | "go" | "rust";
+
 export interface ChallengeMeta {
     slug: string;
     title: string;
@@ -15,6 +22,11 @@ export interface ChallengeMeta {
     stack: string[];
     /** One-line summary mimicking a bug report / Jira issue. */
     issueContext: string;
+    /**
+     * Execution runtime for this challenge's tests. Defaults to "node" when
+     * absent, so existing challenges need no change.
+     */
+    runtime?: Runtime;
 }
 
 export interface ChallengeFile {

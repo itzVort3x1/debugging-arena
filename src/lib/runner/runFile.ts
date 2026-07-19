@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { materializeSandbox } from "./sandbox";
+import { nodeRunner } from "./languages/node";
 import type { ChallengeDefinition } from "../../../challenges/_schema";
 
 export interface RunFileResult {
@@ -40,7 +41,6 @@ export async function runFile(
     handlers: RunFileHandlers = {},
 ): Promise<RunFileResult> {
     const projectRoot = process.cwd();
-    const tsJestPath = path.join(projectRoot, "node_modules", "ts-jest");
     // ts-node's register hook, by absolute path. `-r` accepts an absolute
     // module path, and ts-node resolves `typescript` from its own location
     // inside the app's node_modules.
@@ -51,7 +51,14 @@ export async function runFile(
         "register",
     );
 
-    const sandbox = await materializeSandbox(challenge, fileState, tsJestPath);
+    // This "run one .ts file" path is inherently Node-specific, so it reuses
+    // the Node runner's scaffold for the sandbox's tsconfig.json (which pins
+    // ts-node's compiler options below).
+    const sandbox = await materializeSandbox(
+        challenge,
+        fileState,
+        nodeRunner.scaffold(challenge, fileState),
+    );
     const entryAbs = path.join(sandbox.cwd, entryPath);
     // The sandbox writes its own commonjs tsconfig. Pin ts-node to it so it
     // never searches upward and picks up a foreign config (e.g. the app's
