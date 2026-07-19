@@ -11,6 +11,9 @@ export type Difficulty = "easy" | "medium" | "hard";
  */
 export type Runtime = "node" | "python" | "go" | "rust";
 
+/** All known runtimes, also the directory names a multi-language challenge uses. */
+export const RUNTIMES: Runtime[] = ["node", "python", "go", "rust"];
+
 export interface ChallengeMeta {
     slug: string;
     title: string;
@@ -24,9 +27,21 @@ export interface ChallengeMeta {
     issueContext: string;
     /**
      * Execution runtime for this challenge's tests. Defaults to "node" when
-     * absent, so existing challenges need no change.
+     * absent, so existing (single-language) challenges need no change.
+     *
+     * On a `ChallengeDefinition` loaded for a specific language this is always
+     * the resolved variant's runtime.
      */
     runtime?: Runtime;
+    /**
+     * Languages this challenge can be solved in. Populated by the loader:
+     * `[runtime]` for a single-language challenge, or the set of variant dirs
+     * (`node/`, `python/`, …) for a multi-language one. Authors may set it in a
+     * multi-language `meta.json` to fix the ordering shown in the UI.
+     */
+    languages?: Runtime[];
+    /** Which language a fresh session starts in. Defaults to `languages[0]`. */
+    defaultLanguage?: Runtime;
 }
 
 export interface ChallengeFile {

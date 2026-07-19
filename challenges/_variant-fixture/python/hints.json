@@ -1,0 +1,10 @@
+{
+  "hints": [
+    {
+      "level": 1,
+      "title": "Python-specific hint",
+      "content": "This hints.json lives in the python/ variant dir and overrides the shared root hints.json.",
+      "penaltyPoints": 5
+    }
+  ]
+}
