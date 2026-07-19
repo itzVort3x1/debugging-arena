@@ -72,16 +72,23 @@ export const nodeRunner: LanguageRunner = {
 
     scaffold(_challenge, _fileState, env: ExecEnv) {
         return {
-            "jest.config.js": buildJestConfig(env.tsJestPath),
+            "jest.config.js": buildJestConfig(
+                env.toolPath("node_modules", "ts-jest"),
+            ),
             "tsconfig.json": TSCONFIG_CONTENT,
         };
     },
 
     command(env: ExecEnv, workDir: string): RunCommand {
+        // Node itself: the app's own binary on the host, `node` on the image's
+        // PATH in a container.
+        const nodeExec =
+            env.kind === "docker" ? "node" : process.execPath;
+        const jestBin = env.toolPath("node_modules", "jest", "bin", "jest.js");
         return {
-            cmd: env.nodeExec,
+            cmd: nodeExec,
             args: [
-                env.jestBin,
+                jestBin,
                 "--rootDir",
                 workDir,
                 "--config",

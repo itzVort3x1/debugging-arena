@@ -1,13 +1,16 @@
 import type { Runtime } from "../../../../challenges/_schema";
 import type { LanguageRunner } from "./types";
 import { nodeRunner } from "./node";
+import { pythonRunner } from "./python";
 
 /**
- * Runtime → LanguageRunner. Only "node" is implemented today; adding a
- * language is a new entry here plus its runner module (see MULTI_LANGUAGE_PLAN).
+ * Runtime → LanguageRunner. Adding a language is a new entry here plus its
+ * runner module and image (see MULTI_LANGUAGE_PLAN). go/rust remain declared
+ * in the Runtime union but unimplemented — getRunner throws for those.
  */
 const RUNNERS: Partial<Record<Runtime, LanguageRunner>> = {
     node: nodeRunner,
+    python: pythonRunner,
 };
 
 /** Runtime used when a challenge's meta omits `runtime`. */

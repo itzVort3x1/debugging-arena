@@ -5,9 +5,10 @@ import { streamProcess } from "./stream";
 import type { ExecEnv, Executor, ExecRequest, ExecResult } from "./types";
 
 /**
- * Persistent jest cache, shared across runs and users. The sandbox itself is
- * a throwaway temp dir, so without pinning the cache here jest would recompile
- * every test file with ts-jest on every run.
+ * Persistent test-tool cache, shared across runs and users. The sandbox itself
+ * is a throwaway temp dir, so without pinning the cache here a tool like
+ * ts-jest would recompile every test file on every run. Named for its original
+ * (jest) use; other host-mode runtimes may reuse it under their own subdir.
  */
 const HOST_CACHE_DIR = path.join(os.tmpdir(), "arena-jest-cache");
 
@@ -26,10 +27,10 @@ export const hostExecutor: Executor = {
     env(): ExecEnv {
         const root = process.cwd();
         return {
-            nodeExec: process.execPath,
-            jestBin: path.join(root, "node_modules", "jest", "bin", "jest.js"),
-            tsJestPath: path.join(root, "node_modules", "ts-jest"),
+            kind: "host",
             cacheDir: HOST_CACHE_DIR,
+            // Tools live under the app's own working dir (its node_modules).
+            toolPath: (...segments) => path.join(root, ...segments),
         };
     },
 

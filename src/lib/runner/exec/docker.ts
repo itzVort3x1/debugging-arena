@@ -3,17 +3,20 @@ import crypto from "node:crypto";
 import { streamProcess } from "./stream";
 import type { ExecEnv, Executor, ExecRequest, ExecResult } from "./types";
 
-/** Fixed paths inside the arena-* images (see docker/arena-node/Dockerfile). */
+/** Fixed paths inside the arena-<runtime> images (see docker/ Dockerfiles). */
 const WORK_DIR = "/work";
 const CACHE_DIR = "/cache";
-const TOOLS_DIR = "/opt/arena/node_modules";
+const APP_DIR = "/opt/arena";
 
 /**
- * Named volume holding the persistent ts-jest compile cache. Survives across
- * container runs (each container is `--rm`) so we keep the pre-container
- * cache-reuse optimization. The image initializes it node-owned on first use.
+ * Named volume holding a runtime's persistent test-tool cache (ts-jest compile
+ * output, pytest cache, …). One per image so runtimes don't share a cache dir;
+ * survives across `--rm` containers to keep the cache-reuse optimization. The
+ * image initializes it owned by its unprivileged user on first use.
  */
-const CACHE_VOLUME = "arena-node-cache";
+function cacheVolumeFor(image: string): string {
+    return `${image}-cache`;
+}
 
 /** docker run isolation flags. The whole point of this executor. */
 function isolationArgs(): string[] {
@@ -84,10 +87,11 @@ export const dockerExecutor: Executor = {
 
     env(): ExecEnv {
         return {
-            nodeExec: "node",
-            jestBin: `${TOOLS_DIR}/jest/bin/jest.js`,
-            tsJestPath: `${TOOLS_DIR}/ts-jest`,
+            kind: "docker",
             cacheDir: CACHE_DIR,
+            // POSIX join under the image's app root (always forward slashes,
+            // regardless of the host OS building this string).
+            toolPath: (...segments) => [APP_DIR, ...segments].join("/"),
         };
     },
 
@@ -100,6 +104,7 @@ export const dockerExecutor: Executor = {
 
         const { image, command, sandboxDir, handlers, timeoutMs } = req;
         const name = `arena-run-${crypto.randomUUID()}`;
+        const cacheVolume = cacheVolumeFor(image);
 
         // Only the command's own env is passed — the host environment is NOT
         // forwarded, so no host secrets reach the container.
@@ -116,7 +121,7 @@ export const dockerExecutor: Executor = {
             "-v",
             `${sandboxDir}:${WORK_DIR}`,
             "-v",
-            `${CACHE_VOLUME}:${CACHE_DIR}`,
+            `${cacheVolume}:${CACHE_DIR}`,
             "-w",
             WORK_DIR,
             ...envArgs,

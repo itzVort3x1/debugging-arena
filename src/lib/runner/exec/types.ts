@@ -3,9 +3,10 @@
  *
  * The same LanguageRunner command runs either directly on the host (the
  * in-process `spawn`, no isolation) or inside a locked-down container. The
- * paths a command must reference (node, jest, ts-jest, the cache, the working
- * dir) differ between those two worlds, so an Executor supplies them via
- * `ExecEnv` and the runner builds its command against that.
+ * paths a command must reference (tool binaries, the cache, the working dir)
+ * differ between those two worlds, so an Executor supplies them via `ExecEnv`
+ * — deliberately language-neutral — and each runner resolves its own tool
+ * locations against it.
  */
 
 export interface RunHandlers {
@@ -25,20 +26,23 @@ export interface RunCommand {
 }
 
 /**
- * Path slots a runner needs to build its command, resolved for whichever
- * world the command will run in. On the host these are absolute paths into
- * the app's own node_modules and the OS temp dir; in a container they are the
- * fixed paths baked into the image and its mounts.
+ * The world a command will run in, language-neutral. A runner reads `kind` to
+ * pick its interpreter, `cacheDir` for its test-tool cache, and `toolPath()`
+ * to locate binaries it installed under the app/image root. Runners whose
+ * tools live elsewhere (e.g. pytest on the image's PATH) simply don't call
+ * `toolPath()`.
  */
 export interface ExecEnv {
-    /** Node executable: `process.execPath` on host, `"node"` in the image. */
-    nodeExec: string;
-    /** Absolute path to jest's CLI entry as the running process sees it. */
-    jestBin: string;
-    /** Absolute path to the ts-jest module as the running process sees it. */
-    tsJestPath: string;
-    /** Persistent test-tool cache dir as the running process sees it. */
+    /** Which world the command runs in. */
+    kind: "host" | "docker";
+    /** Persistent, writable cache dir for test-tool caches in this world. */
     cacheDir: string;
+    /**
+     * Resolve a path under this world's app/image root using its path
+     * separator: the app's own working dir on the host, `/opt/arena` in a
+     * container. E.g. `toolPath("node_modules", "jest", "bin", "jest.js")`.
+     */
+    toolPath(...segments: string[]): string;
 }
 
 /** Captured result of a streamed process/container run. */

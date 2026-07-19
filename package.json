@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "docker:build:node": "docker build -t arena-node docker/arena-node",
+    "docker:build:python": "docker build -t arena-python docker/arena-python",
     "postinstall": "prisma generate"
   },
   "dependencies": {
