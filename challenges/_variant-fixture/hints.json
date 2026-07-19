@@ -1,0 +1,10 @@
+{
+  "hints": [
+    {
+      "level": 1,
+      "title": "Shared hint",
+      "content": "This hint lives at the challenge root and is the shared fallback used by any variant without its own hints.json.",
+      "penaltyPoints": 5
+    }
+  ]
+}

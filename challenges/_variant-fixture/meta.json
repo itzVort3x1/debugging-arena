@@ -1,0 +1,11 @@
+{
+  "slug": "_variant-fixture",
+  "title": "Variant Fixture (test only)",
+  "difficulty": "easy",
+  "tags": ["fixture"],
+  "timeLimit": 300,
+  "stack": ["Node.js", "Python"],
+  "issueContext": "Loader test fixture — ignored by the live registry (underscore prefix).",
+  "languages": ["node", "python"],
+  "defaultLanguage": "node"
+}
