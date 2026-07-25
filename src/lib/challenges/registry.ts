@@ -22,8 +22,11 @@ import type {
  *     cached lazily per slug, only when the arena/run/result paths need it.
  *
  * Every accessor is async and awaits the index internally, so no caller has to
- * remember a warm-up step. Caches live for the process lifetime (no TTL yet;
- * invalidation is a later PR).
+ * remember a warm-up step. Both caches use a TTL with stale-while-revalidate +
+ * stale-if-error: past the TTL the cached copy is served immediately while a
+ * background refresh runs, and a failed refresh keeps the last-known-good copy.
+ * {@link invalidateChallengeCache} drops everything for an instant refresh
+ * (e.g. after seeding new content). Caches are per process instance.
  */
 
 /** An index entry: the challenge summary plus its store-relative root path. */
@@ -39,7 +42,24 @@ interface ChallengeAggregate {
   variants: Map<Runtime, ChallengeDefinition>;
 }
 
-let indexPromise: Promise<Map<string, IndexEntry>> | null = null;
+const DEFAULT_CACHE_TTL_MS = 5 * 60_000;
+
+/** Cache TTL in ms. `0` (or negative) disables caching (always refetch). */
+function cacheTtlMs(): number {
+  const raw = process.env.ARENA_CHALLENGE_CACHE_TTL_MS;
+  if (raw === undefined) return DEFAULT_CACHE_TTL_MS;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_CACHE_TTL_MS;
+}
+
+interface IndexCache {
+  index: Map<string, IndexEntry>;
+  loadedAt: number;
+}
+
+let indexCache: IndexCache | null = null;
+let indexInit: Promise<void> | null = null; // in-flight first (blocking) load
+let indexRefresh: Promise<void> | null = null; // in-flight background refresh
 const aggregateCache = new Map<string, Promise<ChallengeAggregate>>();
 
 async function buildIndex(): Promise<Map<string, IndexEntry>> {
@@ -76,16 +96,69 @@ async function buildIndex(): Promise<Map<string, IndexEntry>> {
   return index;
 }
 
-/** Build (once) + return the meta index, retrying on a failed build. */
-function ensureIndex(): Promise<Map<string, IndexEntry>> {
-  if (!indexPromise) {
-    indexPromise = buildIndex().catch((err) => {
-      // Don't cache the failure - let the next request retry the load.
-      indexPromise = null;
-      throw err;
-    });
+/** Rebuild the index and swap it in, dropping stale content aggregates. */
+async function refreshIndex(): Promise<void> {
+  const index = await buildIndex(); // may throw - callers decide how to handle
+  indexCache = { index, loadedAt: Date.now() };
+  // Content was loaded against the previous index; drop it so it reloads fresh.
+  aggregateCache.clear();
+}
+
+/**
+ * Return the meta index, honoring the TTL. First load blocks (and dedupes
+ * concurrent callers); afterwards a stale index is served immediately while a
+ * background refresh runs, and a failed refresh keeps the stale copy.
+ */
+async function ensureIndex(): Promise<Map<string, IndexEntry>> {
+  const ttl = cacheTtlMs();
+
+  // No-cache mode: always rebuild fresh (blocking). Local-authoring escape hatch.
+  if (ttl <= 0) {
+    await refreshIndex();
+    return indexCache!.index;
   }
-  return indexPromise;
+
+  // First load: block until there's an index, deduping concurrent callers. On
+  // failure indexInit clears so the next request retries (no cached failure).
+  if (!indexCache) {
+    if (!indexInit) {
+      indexInit = refreshIndex().finally(() => {
+        indexInit = null;
+      });
+    }
+    await indexInit;
+    return indexCache!.index;
+  }
+
+  // Cached: serve it now; refresh in the background if stale (stale-while-
+  // revalidate). A failed refresh is swallowed so we keep serving stale
+  // (stale-if-error); the next stale hit tries again.
+  if (Date.now() - indexCache.loadedAt >= ttl && !indexRefresh) {
+    indexRefresh = refreshIndex()
+      .catch((err) => {
+        console.error(
+          "Challenge index refresh failed; serving stale index:",
+          err,
+        );
+      })
+      .finally(() => {
+        indexRefresh = null;
+      });
+  }
+  return indexCache.index;
+}
+
+/**
+ * Drop all cached challenge data (index + loaded content) so the next access
+ * reloads from the store. Used by the admin revalidate hook after seeding new
+ * content. Per-instance: in a multi-instance deploy each instance must be
+ * invalidated (or wait out the TTL).
+ */
+export function invalidateChallengeCache(): void {
+  indexCache = null;
+  indexInit = null;
+  indexRefresh = null;
+  aggregateCache.clear();
 }
 
 async function buildAggregate(entry: IndexEntry): Promise<ChallengeAggregate> {
