@@ -85,10 +85,6 @@ model DebugSession {
   attemptsCount Int           @default(0)
   timeTaken     Int? // seconds
   score         Int?
-  // DEPRECATED: solution reveal is now shared per (user, challenge) via
-  // UserChallengeProgress. Retained as a write-only shim for backward compat;
-  // reads source from UserChallengeProgress. Dropped in a later cleanup PR.
-  solutionRevealed Boolean    @default(false)
   fileState     String        @default("{}") // JSON-encoded Record<filename, content>
 
   // Denormalized summary of the most recent test run. TestRun keeps full
