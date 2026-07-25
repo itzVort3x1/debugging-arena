@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import type { ChallengeDefinition } from "../../../../../challenges/_schema";
+import type {
+    ChallengeDefinition,
+    Runtime,
+} from "../../../../../challenges/_schema";
 import { useArenaStore } from "@/store/arena";
 import { useSession } from "@/hooks/useSession";
 import { ArenaLayout } from "@/components/ide/ArenaLayout";
@@ -11,27 +14,39 @@ import { Button } from "@/components/ui/Button";
 import { CenteredScreen } from "@/components/ui/CenteredScreen";
 
 interface ArenaPageClientProps {
-    challenge: ChallengeDefinition;
+    /** Every language variant of the challenge, keyed by runtime. */
+    variants: Partial<Record<Runtime, ChallengeDefinition>>;
+    /** Language the workspace opens in (validated server-side). */
+    initialLanguage: Runtime;
 }
 
 /**
- * Hydrates the store with the challenge (passed from the server) and
- * resolves the user's session via /api/sessions. Renders ArenaLayout
- * once both are in place.
+ * Hydrates the store with the challenge variants (passed from the server) and
+ * resolves the user's session for the initial language via /api/sessions.
+ * Renders ArenaLayout once both are in place. The language switcher then swaps
+ * variants client-side (see useLanguageSwitch).
  */
-export function ArenaPageClient({ challenge }: ArenaPageClientProps) {
+export function ArenaPageClient({
+    variants,
+    initialLanguage,
+}: ArenaPageClientProps) {
     const setChallenge = useArenaStore((s) => s.setChallenge);
+    const setVariants = useArenaStore((s) => s.setVariants);
     const reset = useArenaStore((s) => s.reset);
 
-    // Challenge has to be in the store before useSession triggers
+    const challenge = variants[initialLanguage]!;
+
+    // Challenge + variants have to be in the store before useSession triggers
     // setSession, so the first open tab seeds from the editable file list.
     useEffect(() => {
+        setVariants(variants);
         setChallenge(challenge);
         return () => reset();
-    }, [challenge, setChallenge, reset]);
+    }, [variants, challenge, setVariants, setChallenge, reset]);
 
     const { session, isLoading, error, reload } = useSession(
         challenge.meta.slug,
+        initialLanguage,
     );
 
     if (error) {
