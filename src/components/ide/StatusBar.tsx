@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useArenaStore } from "@/store/arena";
 import { CheckIcon, CloseIcon, TerminalIcon } from "@/components/ui/icons";
+import { runtimeLabel } from "@/lib/runtimes";
 
 function TestRunBadge() {
     const session = useArenaStore((s) => s.session);
@@ -108,6 +109,7 @@ function SaveIndicator() {
 export function StatusBar() {
     const activeFile = useArenaStore((s) => s.activeFile);
     const challenge = useArenaStore((s) => s.challenge);
+    const session = useArenaStore((s) => s.session);
     const terminalOpen = useArenaStore((s) => s.terminalOpen);
     const toggleTerminal = useArenaStore((s) => s.toggleTerminal);
 
@@ -116,6 +118,12 @@ export function StatusBar() {
           challenge?.testFiles.find((f) => f.path === activeFile) ??
           null)
         : null;
+
+    // Only surface the solve language when the challenge actually offers more
+    // than one - single-language challenges keep their current status bar.
+    const isMultiLanguage = (challenge?.meta.languages?.length ?? 0) > 1;
+    const solveLanguage =
+        isMultiLanguage && session ? runtimeLabel(session.language) : null;
 
     return (
         <div className="flex h-6 shrink-0 items-center justify-between bg-vscode-statusbar px-3 text-[11px] text-white">
@@ -136,6 +144,14 @@ export function StatusBar() {
                 </span>
             </div>
             <div className="flex shrink-0 items-center gap-4">
+                {solveLanguage ? (
+                    <span
+                        className="text-white/80"
+                        title="Language you're solving this challenge in"
+                    >
+                        Solving: {solveLanguage}
+                    </span>
+                ) : null}
                 <TestRunBadge />
                 <SaveIndicator />
                 <span className="text-white/80">

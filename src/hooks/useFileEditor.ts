@@ -52,6 +52,12 @@ export function useFileEditor(): UseFileEditorResult {
 
   const flush = useCallback(async () => {
     if (!session) return;
+    // A debounced flush can fire after a language switch swapped the active
+    // session (loadVariant). Bail if this flush's session is no longer the
+    // active one - otherwise we'd PATCH the old session with the new variant's
+    // buffer. The pre-switch flush in useLanguageSwitch already saved it.
+    const active = useArenaStore.getState().session;
+    if (!active || active.id !== session.id) return;
     const snapshot = useArenaStore.getState().fileContents;
 
     inflightRef.current?.abort();

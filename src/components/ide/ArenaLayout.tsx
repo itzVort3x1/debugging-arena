@@ -9,6 +9,7 @@ import { FileExplorer } from "./FileExplorer";
 import { ProblemPanel } from "./ProblemPanel";
 import { HintPanel } from "./HintPanel";
 import { TopBar } from "./TopBar";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { TerminalDock } from "./TerminalDock";
 import { StatusBar } from "./StatusBar";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ export function ArenaLayout() {
 
   return (
     <div className="flex h-screen flex-col bg-vscode-bg text-vscode-fg">
-      <TopBar />
+      <TopBar leftExtra={<LanguageSwitcher />} />
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-56 shrink-0 border-r border-vscode-border">

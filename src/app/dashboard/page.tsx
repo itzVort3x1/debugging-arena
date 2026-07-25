@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDuration, formatRelativeTime } from "@/lib/format";
+import { runtimeLabel } from "@/lib/runtimes";
 import { displayName } from "@/lib/user";
 
 export const metadata: Metadata = {
@@ -57,8 +58,11 @@ export default async function DashboardPage() {
         medium: 0,
         hard: 0,
     };
-    for (const s of data.solved) {
-        const c = getChallenge(s.slug);
+    // data.solved can carry two entries for one challenge (JS + Python), so
+    // count each distinct challenge once for the difficulty breakdown.
+    const solvedSlugs = Array.from(new Set(data.solved.map((s) => s.slug)));
+    for (const slug of solvedSlugs) {
+        const c = getChallenge(slug);
         if (c) solvedByDiff[c.meta.difficulty]++;
     }
     const byDifficulty: DifficultyProgress[] = order.map((difficulty) => ({
@@ -71,8 +75,8 @@ export default async function DashboardPage() {
     // Tech-stack breakdown across solved challenges (LeetCode's "Languages"
     // panel analog). A challenge can contribute several stack labels.
     const languageCounts = new Map<string, number>();
-    for (const s of data.solved) {
-        const c = getChallenge(s.slug);
+    for (const slug of solvedSlugs) {
+        const c = getChallenge(slug);
         if (!c) continue;
         for (const tech of c.meta.stack) {
             languageCounts.set(tech, (languageCounts.get(tech) ?? 0) + 1);
@@ -281,10 +285,16 @@ function SessionCard({
     if (!challenge) return null;
     const { title, difficulty } = challenge.meta;
 
+    // Only badge the language when the challenge actually offers more than one,
+    // so single-language challenges look exactly as before.
+    const isMultiLanguage = (challenge.meta.languages?.length ?? 0) > 1;
+    const languageLabel = isMultiLanguage ? runtimeLabel(session.language) : null;
+
     const href =
         kind === "solved"
             ? `/challenges/${session.slug}/result/${session.sessionId}`
-            : `/challenges/${session.slug}/arena`;
+            : // Resume the specific language attempt, not the default variant.
+              `/challenges/${session.slug}/arena?language=${session.language}`;
 
     return (
         <Link
@@ -292,9 +302,16 @@ function SessionCard({
             className="group flex flex-col rounded-lg border border-vscode-border bg-vscode-bg-elevated/60 p-4 transition-all hover:-translate-y-0.5 hover:border-vscode-accent/60 hover:shadow-lg hover:shadow-vscode-accent/10"
         >
             <div className="mb-2 flex items-center justify-between gap-2">
-                <Badge tone={difficultyTone[difficulty]} size="sm">
-                    {difficulty}
-                </Badge>
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <Badge tone={difficultyTone[difficulty]} size="sm">
+                        {difficulty}
+                    </Badge>
+                    {languageLabel ? (
+                        <Badge tone="neutral" size="sm">
+                            {languageLabel}
+                        </Badge>
+                    ) : null}
+                </div>
                 {kind === "solved" ? (
                     <span className="text-sm font-semibold text-vscode-accent">
                         {typeof session.score === "number"

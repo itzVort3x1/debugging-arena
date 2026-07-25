@@ -63,6 +63,31 @@ export function getChallengeLanguages(slug: string): Runtime[] | undefined {
   return getRegistry().get(slug)?.languages;
 }
 
+/**
+ * All variants of a challenge as a plain (serializable) object, for handing the
+ * whole set to the arena client so it can switch languages without a
+ * round-trip. Returns undefined for an unknown slug.
+ */
+export function getChallengeVariants(slug: string):
+  | {
+      languages: Runtime[];
+      defaultLanguage: Runtime;
+      variants: Partial<Record<Runtime, ChallengeDefinition>>;
+    }
+  | undefined {
+  const aggregate = getRegistry().get(slug);
+  if (!aggregate) return undefined;
+  const variants: Partial<Record<Runtime, ChallengeDefinition>> = {};
+  aggregate.variants.forEach((def, lang) => {
+    variants[lang] = def;
+  });
+  return {
+    languages: aggregate.languages,
+    defaultLanguage: aggregate.defaultLanguage,
+    variants,
+  };
+}
+
 /** Every challenge's default variant (used for listings/dashboards). */
 export function getAllChallenges(): ChallengeDefinition[] {
   return Array.from(getRegistry().values()).map(

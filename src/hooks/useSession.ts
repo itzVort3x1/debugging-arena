@@ -22,7 +22,10 @@ interface UseSessionResult {
  * Assumes the caller has already populated the challenge in the store so
  * setSession can seed the first open tab from the editable file list.
  */
-export function useSession(challengeSlug: string | null): UseSessionResult {
+export function useSession(
+    challengeSlug: string | null,
+    language?: string,
+): UseSessionResult {
     const session = useArenaStore((s) => s.session);
     const setSession = useArenaStore((s) => s.setSession);
     const [isLoading, setIsLoading] = useState(false);
@@ -39,9 +42,16 @@ export function useSession(challengeSlug: string | null): UseSessionResult {
             setIsLoading(true);
             setError(null);
             try {
+                // language is optional: the server resolves the challenge's
+                // default variant when it's omitted.
                 const data = await apiFetch<DebugSessionResponse>(
                     "/api/sessions",
-                    { method: "POST", json: { challengeSlug: slug } },
+                    {
+                        method: "POST",
+                        json: language
+                            ? { challengeSlug: slug, language }
+                            : { challengeSlug: slug },
+                    },
                 );
                 if (!cancelled) setSession(data);
             } catch (err) {
@@ -61,7 +71,7 @@ export function useSession(challengeSlug: string | null): UseSessionResult {
         return () => {
             cancelled = true;
         };
-    }, [challengeSlug, setSession, reloadCount]);
+    }, [challengeSlug, language, setSession, reloadCount]);
 
     return { session, isLoading, error, reload };
 }
