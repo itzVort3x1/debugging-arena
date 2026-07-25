@@ -8,7 +8,7 @@ import {
     parseJsonBody,
     requireUserId,
 } from "@/lib/api/guards";
-import { serializeSession } from "@/lib/sessions";
+import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 
 const PatchSchema = z.object({
     fileState: z.record(z.string(), z.string()),
@@ -30,12 +30,12 @@ export const GET = route<RouteContext>(async (_req, { params }) => {
     const session = assertOwned(
         await prisma.debugSession.findUnique({
             where: { id: params.sessionId },
-            include: { hintRequests: { select: { level: true } } },
         }),
         userId,
     );
+    const shared = await loadSharedReveals(userId, session.challengeSlug);
 
-    return NextResponse.json(serializeSession(session));
+    return NextResponse.json(serializeSession(session, shared));
 });
 
 /**
@@ -60,8 +60,8 @@ export const PATCH = route<RouteContext>(async (req, { params }) => {
     const updated = await prisma.debugSession.update({
         where: { id: params.sessionId },
         data: { fileState: JSON.stringify(fileState) },
-        include: { hintRequests: { select: { level: true } } },
     });
+    const shared = await loadSharedReveals(userId, updated.challengeSlug);
 
-    return NextResponse.json(serializeSession(updated));
+    return NextResponse.json(serializeSession(updated, shared));
 });

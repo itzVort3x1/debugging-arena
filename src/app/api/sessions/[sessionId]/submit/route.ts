@@ -12,7 +12,7 @@ import {
 import { runChallenge } from "@/lib/runner/runChallenge";
 import { RunnerBusyError } from "@/lib/runner/concurrency";
 import { computeScore } from "@/lib/scoring";
-import { serializeSession } from "@/lib/sessions";
+import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 
 const BodySchema = z.object({
     fileState: z.record(z.string(), z.string()),
@@ -47,7 +47,6 @@ export const POST = route<RouteContext>(async (req, { params }) => {
         assertOwned(
             await prisma.debugSession.findUnique({
                 where: { id: params.sessionId },
-                include: { hintRequests: { select: { level: true } } },
             }),
             userId,
         ),
@@ -55,6 +54,8 @@ export const POST = route<RouteContext>(async (req, { params }) => {
     );
 
     const challenge = requireChallenge(session.challengeSlug, session.language);
+    // Reveal penalties are shared per (user, challenge), across languages.
+    const shared = await loadSharedReveals(userId, session.challengeSlug);
 
     // Persist the submitted buffer before verifying (implicit autosave flush).
     await prisma.debugSession.update({
@@ -93,7 +94,6 @@ export const POST = route<RouteContext>(async (req, { params }) => {
         const updated = await prisma.debugSession.update({
             where: { id: params.sessionId },
             data: runCounts,
-            include: { hintRequests: { select: { level: true } } },
         });
         throw new HttpError(
             409,
@@ -104,14 +104,11 @@ export const POST = route<RouteContext>(async (req, { params }) => {
                 passed: result.passed,
                 failed: result.failed,
                 total: result.total,
-                session: serializeSession(updated),
+                session: serializeSession(updated, shared),
             },
         );
     }
 
-    const revealedHintLevels = Array.from(
-        new Set(session.hintRequests.map((h) => h.level)),
-    );
     const completedAt = new Date();
     const timeTaken = Math.max(
         0,
@@ -121,10 +118,10 @@ export const POST = route<RouteContext>(async (req, { params }) => {
     );
     const breakdown = computeScore({
         challenge,
-        revealedHintLevels,
+        revealedHintLevels: shared.revealedHintLevels,
         attemptsCount: session.attemptsCount,
         timeTaken,
-        solutionRevealed: session.solutionRevealed,
+        solutionRevealed: shared.solutionRevealed,
     });
 
     const updated = await prisma.debugSession.update({
@@ -136,11 +133,10 @@ export const POST = route<RouteContext>(async (req, { params }) => {
             timeTaken,
             score: breakdown.score,
         },
-        include: { hintRequests: { select: { level: true } } },
     });
 
     return NextResponse.json({
-        session: serializeSession(updated),
+        session: serializeSession(updated, shared),
         breakdown,
     });
 });

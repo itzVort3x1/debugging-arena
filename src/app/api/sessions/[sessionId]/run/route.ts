@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { runChallenge } from "@/lib/runner/runChallenge";
 import { runFile } from "@/lib/runner/runFile";
-import { serializeSession } from "@/lib/sessions";
+import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 
 const BodySchema = z.object({
     fileState: z.record(z.string(), z.string()),
@@ -155,8 +155,11 @@ export const POST = route<RouteContext>(async (req, { params }) => {
                             lastRunAt: new Date(),
                             attemptsCount: { increment: 1 },
                         },
-                        include: { hintRequests: { select: { level: true } } },
                     });
+                    const shared = await loadSharedReveals(
+                        userId,
+                        session.challengeSlug,
+                    );
 
                     emit("result", {
                         passed: result.passed,
@@ -164,7 +167,7 @@ export const POST = route<RouteContext>(async (req, { params }) => {
                         total: result.total,
                         exitCode: result.exitCode,
                         durationMs: result.durationMs,
-                        session: serializeSession(updated),
+                        session: serializeSession(updated, shared),
                     });
                 }
             } catch (err) {

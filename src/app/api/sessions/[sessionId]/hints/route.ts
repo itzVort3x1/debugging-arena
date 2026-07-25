@@ -9,7 +9,7 @@ import {
     requireChallenge,
     requireUserId,
 } from "@/lib/api/guards";
-import { serializeSession } from "@/lib/sessions";
+import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 
 const BodySchema = z.object({
     level: z.number().int().min(1).max(4),
@@ -28,9 +28,13 @@ export const runtime = "nodejs";
  * lives on the challenge definition, and we record which levels were
  * revealed in HintRequest so scoring (PR 6.3) can't be gamed client-side.
  *
+ * Hint reveals are SHARED per (user, challenge): the record is keyed on
+ * (userId, challengeSlug, level), so revealing a hint in one language shows
+ * it viewed - and penalized - in every language for that challenge.
+ *
  * Idempotent - revealing the same level twice is a no-op thanks to the
- * @@unique([sessionId, level]) constraint; we swallow the duplicate and
- * return the current state either way.
+ * @@unique([userId, challengeSlug, level]) constraint; we swallow the
+ * duplicate and return the current state either way.
  */
 export const POST = route<RouteContext>(async (req, { params }) => {
     const userId = await requireUserId();
@@ -54,27 +58,29 @@ export const POST = route<RouteContext>(async (req, { params }) => {
         );
     }
 
-    // Record the reveal; ignore the unique-constraint violation that fires
-    // when this level was already revealed.
+    // Record the shared reveal; ignore the unique-constraint violation that
+    // fires when this level was already revealed for this user+challenge.
+    // sessionId is kept for audit only.
     try {
         await prisma.hintRequest.create({
-            data: { sessionId: session.id, level },
+            data: {
+                userId,
+                challengeSlug: session.challengeSlug,
+                sessionId: session.id,
+                level,
+            },
         });
     } catch {
         // P2002 unique violation - already revealed. Fall through.
     }
 
-    // Recompute hintsUsed from the source of truth and return the full
+    // Recompute hintsUsed from the shared reveal state and return the full
     // session so the client can merge revealedHintLevels + hintsUsed.
+    const shared = await loadSharedReveals(userId, session.challengeSlug);
     const updated = await prisma.debugSession.update({
         where: { id: session.id },
-        data: {
-            hintsUsed: await prisma.hintRequest.count({
-                where: { sessionId: session.id },
-            }),
-        },
-        include: { hintRequests: { select: { level: true } } },
+        data: { hintsUsed: shared.revealedHintLevels.length },
     });
 
-    return NextResponse.json(serializeSession(updated));
+    return NextResponse.json(serializeSession(updated, shared));
 });

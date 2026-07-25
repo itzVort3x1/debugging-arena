@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getChallenge } from "@/lib/challenges/registry";
-import { serializeSession } from "@/lib/sessions";
+import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 import { computeScore } from "@/lib/scoring";
 import { ResultView } from "./ResultView";
 
@@ -38,7 +38,6 @@ export default async function ResultPage({ params }: ResultPageProps) {
 
     const row = await prisma.debugSession.findUnique({
         where: { id: params.sessionId },
-        include: { hintRequests: { select: { level: true } } },
     });
     // 404 (not 403) on a foreign or mismatched session - don't leak ids.
     if (!row || row.userId !== auth.user.id) notFound();
@@ -51,7 +50,8 @@ export default async function ResultPage({ params }: ResultPageProps) {
         redirect(`/challenges/${params.slug}/arena`);
     }
 
-    const session = serializeSession(row);
+    const shared = await loadSharedReveals(row.userId, row.challengeSlug);
+    const session = serializeSession(row, shared);
     // Recompute the breakdown for display. Inputs are server-authoritative
     // and deterministic, so this matches the score persisted at submit time.
     const breakdown = computeScore({
