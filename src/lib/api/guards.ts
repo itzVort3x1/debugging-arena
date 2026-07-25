@@ -82,11 +82,11 @@ export function assertEditable<T extends { status: string }>(
  * back to the challenge's default variant, so single-language sessions can
  * never 500 on a language mismatch.
  */
-export function requireChallenge(
+export async function requireChallenge(
     slug: string,
     language?: string,
-): ChallengeDefinition {
-    const languages = getChallengeLanguages(slug);
+): Promise<ChallengeDefinition> {
+    const languages = await getChallengeLanguages(slug);
     if (!languages) {
         throw new HttpError(500, "Challenge no longer registered");
     }
@@ -94,7 +94,7 @@ export function requireChallenge(
         language && languages.includes(language as Runtime)
             ? (language as Runtime)
             : undefined; // let getChallenge pick the default variant
-    const challenge = getChallenge(slug, resolved);
+    const challenge = await getChallenge(slug, resolved);
     if (!challenge) {
         throw new HttpError(500, "Challenge no longer registered");
     }

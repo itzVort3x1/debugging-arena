@@ -8,7 +8,7 @@ export async function GET(
   _req: Request,
   { params }: { params: { slug: string } }
 ) {
-  const challenge = getChallenge(params.slug);
+  const challenge = await getChallenge(params.slug);
   if (!challenge) {
     return NextResponse.json(
       { error: "Challenge not found" },

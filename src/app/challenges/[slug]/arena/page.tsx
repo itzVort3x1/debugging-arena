@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import {
-  getChallenge,
+  getChallengeMeta,
   getChallengeVariants,
 } from "@/lib/challenges/registry";
 import type { Runtime } from "../../../../../challenges/_schema";
@@ -14,12 +14,14 @@ interface ArenaPageProps {
   searchParams: { language?: string };
 }
 
-export function generateMetadata({ params }: ArenaPageProps): Metadata {
-  const challenge = getChallenge(params.slug);
-  if (!challenge) return { title: "Challenge" };
+export async function generateMetadata({
+  params,
+}: ArenaPageProps): Promise<Metadata> {
+  const meta = await getChallengeMeta(params.slug);
+  if (!meta) return { title: "Challenge" };
   return {
-    title: challenge.meta.title,
-    description: challenge.meta.issueContext,
+    title: meta.title,
+    description: meta.issueContext,
   };
 }
 
@@ -33,7 +35,7 @@ export default async function ArenaPage({
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
 
-  const challenge = getChallengeVariants(params.slug);
+  const challenge = await getChallengeVariants(params.slug);
   if (!challenge) notFound();
 
   // Resolve the starting language: an explicit `?language=` (used by dashboard
