@@ -4,6 +4,7 @@ import {
   loadChallengeSummary,
   type ChallengeSummary,
 } from "./loader";
+import { MANIFEST_PATH, parseManifest } from "./manifest";
 import { selectChallengeStore } from "./store/select";
 import type {
   ChallengeDefinition,
@@ -43,17 +44,35 @@ const aggregateCache = new Map<string, Promise<ChallengeAggregate>>();
 
 async function buildIndex(): Promise<Map<string, IndexEntry>> {
   const store = selectChallengeStore();
-  const roots = await listChallengeRoots(store);
-  const entries = await Promise.all(
-    roots.map(async (root) => ({
-      root,
-      summary: await loadChallengeSummary(store, root),
-    })),
-  );
-  const index = new Map<string, IndexEntry>();
-  for (const { root, summary } of entries) {
-    index.set(summary.slug, { ...summary, root });
+
+  // Prefer the precomputed manifest (one read); fall back to listing the store
+  // and reading each summary when it's absent (local dev without a generated
+  // manifest). Both yield the same IndexEntry shape.
+  const manifestRaw = await store.readText(MANIFEST_PATH);
+  let entries: IndexEntry[];
+  if (manifestRaw !== undefined) {
+    const manifest = parseManifest(manifestRaw);
+    entries = manifest.challenges.map((c) => ({
+      root: c.path,
+      slug: c.slug,
+      languages: c.languages,
+      defaultLanguage: c.defaultLanguage,
+      meta: c.meta,
+    }));
+  } else {
+    const roots = await listChallengeRoots(store);
+    entries = await Promise.all(
+      roots.map(async (root) => ({
+        root,
+        ...(await loadChallengeSummary(store, root)),
+      })),
+    );
   }
+
+  // Sort by slug so listings are deterministic regardless of source/order.
+  entries.sort((a, b) => a.slug.localeCompare(b.slug));
+  const index = new Map<string, IndexEntry>();
+  for (const entry of entries) index.set(entry.slug, entry);
   return index;
 }
 

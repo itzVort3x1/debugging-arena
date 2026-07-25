@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated challenge manifest (a build artifact; regenerate with scripts/build-manifest.ts)
+challenges/index.json
