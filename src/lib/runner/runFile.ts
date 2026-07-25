@@ -1,8 +1,6 @@
-import { spawn } from "node:child_process";
-import path from "node:path";
 import { materializeSandbox } from "./sandbox";
-import { nodeRunner } from "./languages/node";
-import { hostExecutor } from "./exec/host";
+import { getRunner } from "./languages/registry";
+import { selectExecutor } from "./exec/select";
 import { runLimiter } from "./concurrency";
 import type { ChallengeDefinition } from "../../../challenges/_schema";
 
@@ -28,19 +26,16 @@ export interface RunFileHandlers {
 const RUN_TIMEOUT_MS = 30_000;
 
 /**
- * Materialize the challenge into a temp dir and execute a single TypeScript
- * file directly with ts-node, streaming its stdout/stderr. Unlike
- * `runChallenge`, this runs no tests and computes no pass/fail - it's the
- * "just run the file and see my console.logs" debugging path.
+ * Materialize the challenge into a temp dir and execute a single editable file
+ * for its console output, streaming stdout/stderr. Unlike `runChallenge`, this
+ * runs no tests and computes no pass/fail - it's the "just run the file and see
+ * my logs" debugging path.
  *
- * ts-node is resolved from the app's own node_modules by absolute path so the
- * sandbox (which has no node_modules) can still load it via `-r`. Type errors
- * are ignored (TS_NODE_TRANSPILE_ONLY) so the file runs the same way the jest
- * path runs with `diagnostics: false`.
- *
- * NOTE: unlike `runChallenge`, this debugging path is not yet containerized —
- * it always runs on the host and inherits its environment. Isolating it is a
- * follow-up; the scored test path is the one Phase 2 secures.
+ * Dispatches by `meta.runtime` exactly like `runChallenge`: the LanguageRunner
+ * supplies the single-file command (ts-node for node, `python` for python) and
+ * the selected Executor decides host vs container. A runtime whose runner has
+ * no `fileCommand` (no single-file entrypoint) rejects; the UI disables the
+ * Run File button for those so it shouldn't be reachable.
  */
 export async function runFile(
     challenge: ChallengeDefinition,
@@ -55,97 +50,49 @@ export async function runFile(
         onQueued: handlers.onQueued,
     });
     try {
-        return await runFileInner(challenge, fileState, entryPath, handlers);
+        const runner = getRunner(challenge.meta.runtime);
+        if (!runner.fileCommand) {
+            throw new Error(
+                `Running a single file isn't supported for the ${
+                    challenge.meta.runtime ?? "node"
+                } runtime`,
+            );
+        }
+
+        const executor = selectExecutor();
+        const env = executor.env();
+        const scaffoldFiles = runner.scaffold(challenge, fileState, env);
+        const sandbox = await materializeSandbox(
+            challenge,
+            fileState,
+            scaffoldFiles,
+        );
+        const start = Date.now();
+
+        try {
+            const command = runner.fileCommand(
+                env,
+                executor.workDir(sandbox.cwd),
+                entryPath,
+            );
+            const { exitCode, stdout, stderr } = await executor.run({
+                image: runner.image,
+                command,
+                sandboxDir: sandbox.cwd,
+                handlers,
+                timeoutMs: RUN_TIMEOUT_MS,
+            });
+
+            return {
+                stdout,
+                stderr,
+                exitCode,
+                durationMs: Date.now() - start,
+            };
+        } finally {
+            await sandbox.cleanup();
+        }
     } finally {
         release();
-    }
-}
-
-async function runFileInner(
-    challenge: ChallengeDefinition,
-    fileState: Record<string, string>,
-    entryPath: string,
-    handlers: RunFileHandlers,
-): Promise<RunFileResult> {
-    const projectRoot = process.cwd();
-    // ts-node's register hook, by absolute path. `-r` accepts an absolute
-    // module path, and ts-node resolves `typescript` from its own location
-    // inside the app's node_modules.
-    const tsNodeRegister = path.join(
-        projectRoot,
-        "node_modules",
-        "ts-node",
-        "register",
-    );
-
-    // This "run one .ts file" path is inherently Node-specific and host-only,
-    // so it reuses the Node runner's scaffold (host paths) for the sandbox's
-    // tsconfig.json, which pins ts-node's compiler options below.
-    const sandbox = await materializeSandbox(
-        challenge,
-        fileState,
-        nodeRunner.scaffold(challenge, fileState, hostExecutor.env()),
-    );
-    const entryAbs = path.join(sandbox.cwd, entryPath);
-    // The sandbox writes its own commonjs tsconfig. Pin ts-node to it so it
-    // never searches upward and picks up a foreign config (e.g. the app's
-    // NodeNext tsconfig), which would fail to compile the entry file.
-    const tsconfigPath = path.join(sandbox.cwd, "tsconfig.json");
-    const start = Date.now();
-
-    try {
-        const proc = spawn(process.execPath, ["-r", tsNodeRegister, entryAbs], {
-            cwd: sandbox.cwd,
-            env: {
-                ...process.env,
-                // Transpile only: don't fail on type errors, mirroring the
-                // jest path's `diagnostics: false`.
-                TS_NODE_TRANSPILE_ONLY: "1",
-                TS_NODE_PROJECT: tsconfigPath,
-                FORCE_COLOR: "1",
-            },
-        });
-
-        let stdout = "";
-        let stderr = "";
-        proc.stdout?.on("data", (b) => {
-            const s = b.toString();
-            stdout += s;
-            handlers.onStdout?.(s);
-        });
-        proc.stderr?.on("data", (b) => {
-            const s = b.toString();
-            stderr += s;
-            handlers.onStderr?.(s);
-        });
-
-        const abortHandler = () => proc.kill("SIGKILL");
-        handlers.signal?.addEventListener("abort", abortHandler, {
-            once: true,
-        });
-
-        const timer = setTimeout(() => proc.kill("SIGKILL"), RUN_TIMEOUT_MS);
-
-        const exitCode = await new Promise<number | null>((resolve, reject) => {
-            proc.on("close", (code) => {
-                clearTimeout(timer);
-                handlers.signal?.removeEventListener("abort", abortHandler);
-                resolve(code);
-            });
-            proc.on("error", (err) => {
-                clearTimeout(timer);
-                handlers.signal?.removeEventListener("abort", abortHandler);
-                reject(err);
-            });
-        });
-
-        return {
-            stdout,
-            stderr,
-            exitCode,
-            durationMs: Date.now() - start,
-        };
-    } finally {
-        await sandbox.cleanup();
     }
 }

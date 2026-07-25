@@ -63,6 +63,14 @@ function inWorkDir(workDir: string, rel: string): string {
 }
 
 /**
+ * The Node binary to invoke: `node` from the image's PATH in a container, or
+ * the app's own binary on the host (the host has no guaranteed `node` on PATH).
+ */
+function nodeExecutable(env: ExecEnv): string {
+    return env.kind === "docker" ? "node" : process.execPath;
+}
+
+/**
  * The original jest-based runner, now the first entry in the language
  * registry. Runtime "node" (the default) resolves to this. It runs under
  * either executor: on the host, or inside the arena-node image.
@@ -80,13 +88,9 @@ export const nodeRunner: LanguageRunner = {
     },
 
     command(env: ExecEnv, workDir: string): RunCommand {
-        // Node itself: the app's own binary on the host, `node` on the image's
-        // PATH in a container.
-        const nodeExec =
-            env.kind === "docker" ? "node" : process.execPath;
         const jestBin = env.toolPath("node_modules", "jest", "bin", "jest.js");
         return {
-            cmd: nodeExec,
+            cmd: nodeExecutable(env),
             args: [
                 jestBin,
                 "--rootDir",
@@ -111,6 +115,26 @@ export const nodeRunner: LanguageRunner = {
             ],
             env: {
                 CI: "true",
+                FORCE_COLOR: "1",
+            },
+        };
+    },
+
+    fileCommand(env: ExecEnv, workDir: string, entryPath: string): RunCommand {
+        // ts-node's register hook by absolute path (host node_modules, or the
+        // image's /opt/arena). `-r` loads it so a .ts entry runs without a
+        // separate compile step.
+        const tsNodeRegister = env.toolPath("node_modules", "ts-node", "register");
+        return {
+            cmd: nodeExecutable(env),
+            args: ["-r", tsNodeRegister, inWorkDir(workDir, entryPath)],
+            env: {
+                // Transpile only: don't fail on type errors, mirroring the jest
+                // path's `diagnostics: false`.
+                TS_NODE_TRANSPILE_ONLY: "1",
+                // Pin ts-node to the sandbox's commonjs tsconfig so it never
+                // searches upward and picks up a foreign config.
+                TS_NODE_PROJECT: inWorkDir(workDir, "tsconfig.json"),
                 FORCE_COLOR: "1",
             },
         };

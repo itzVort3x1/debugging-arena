@@ -48,6 +48,16 @@ export interface LanguageRunner {
     command(env: ExecEnv, workDir: string): RunCommand;
 
     /**
+     * How to execute a single editable file for its console output only — the
+     * "just run my file and see the logs" path (no tests, no pass/fail, no
+     * scoring). `entryPath` is the sandbox-relative path of the file to run.
+     *
+     * Optional: a runtime with no single-file entrypoint omits it, and the UI
+     * disables the Run File button for challenges in that language.
+     */
+    fileCommand?(env: ExecEnv, workDir: string, entryPath: string): RunCommand;
+
+    /**
      * Normalize this framework's machine output into pass/fail/total counts.
      * `sandboxDir` is always the host path (the container bind-mounts it), and
      * `stdout` is provided for frameworks that only report on the console.
