@@ -64,8 +64,7 @@ export const POST = route<RouteContext>(async (_req, { params }) => {
         throw new HttpError(409, "Reveal all hints before the solution");
     }
 
-    // Persist the shared reveal (idempotent). Also mirror onto the session's
-    // legacy column as a write-only shim until it is dropped.
+    // Persist the shared reveal (idempotent) - the sole source of truth now.
     await prisma.userChallengeProgress.upsert({
         where: {
             userId_challengeSlug: {
@@ -80,12 +79,8 @@ export const POST = route<RouteContext>(async (_req, { params }) => {
         },
         update: { solutionRevealed: true },
     });
-    const updated = await prisma.debugSession.update({
-        where: { id: session.id },
-        data: { solutionRevealed: true },
-    });
 
     return NextResponse.json(
-        serializeSession(updated, { ...shared, solutionRevealed: true }),
+        serializeSession(session, { ...shared, solutionRevealed: true }),
     );
 });
