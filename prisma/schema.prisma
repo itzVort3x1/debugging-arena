@@ -27,6 +27,8 @@ model User {
   sessions     DebugSession[]
   accounts     Account[]
   authSessions Session[]
+  hintRequests HintRequest[]
+  challengeProgress UserChallengeProgress[]
 }
 
 // ----- NextAuth standard tables -----
@@ -83,7 +85,9 @@ model DebugSession {
   attemptsCount Int           @default(0)
   timeTaken     Int? // seconds
   score         Int?
-  // True once the user reveals the full worked solution. Forfeits the score.
+  // DEPRECATED: solution reveal is now shared per (user, challenge) via
+  // UserChallengeProgress. Retained as a write-only shim for backward compat;
+  // reads source from UserChallengeProgress. Dropped in a later cleanup PR.
   solutionRevealed Boolean    @default(false)
   fileState     String        @default("{}") // JSON-encoded Record<filename, content>
 
@@ -119,14 +123,40 @@ model TestRun {
 
 model HintRequest {
   id          String   @id @default(cuid())
-  sessionId   String
+  // Hint reveals are SHARED per (user, challenge): viewing a hint in one
+  // language shows it viewed in every language and its penalty applies to
+  // every language's score. Keyed on (userId, challengeSlug, level).
+  userId        String
+  challengeSlug String
+  // The session the reveal was made from, kept for audit only. Nullable and
+  // SET NULL on delete so the shared reveal survives its originating session.
+  sessionId   String?
   level       Int
   requestedAt DateTime @default(now())
 
-  session DebugSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session DebugSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
-  // A given hint level can only be revealed once per session.
-  @@unique([sessionId, level])
+  // A given hint level can only be revealed once per user+challenge, shared
+  // across languages and sessions.
+  @@unique([userId, challengeSlug, level])
+}
+
+// Shared per-(user, challenge) progress that is independent of language and
+// of any single session. Currently tracks the solution reveal (forfeits the
+// score in every language), matching the shared model for hint reveals.
+model UserChallengeProgress {
+  id               String   @id @default(cuid())
+  userId           String
+  challengeSlug    String
+  // True once the user reveals the full worked solution for this challenge in
+  // any language. Idempotent, never retroactive (scores are stamped at submit).
+  solutionRevealed Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeSlug])
 }
 
 model Postmortem {

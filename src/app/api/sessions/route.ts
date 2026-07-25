@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { HttpError, route } from "@/lib/api/http";
 import { parseJsonBody, requireUserId } from "@/lib/api/guards";
 import { getChallenge, getChallengeLanguages } from "@/lib/challenges/registry";
-import { serializeSession } from "@/lib/sessions";
+import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 import type { Runtime } from "../../../../challenges/_schema";
 
 const CreateSessionSchema = z.object({
@@ -59,10 +59,14 @@ export const POST = route(async (req: Request) => {
             status: "IN_PROGRESS",
         },
         orderBy: { startedAt: "desc" },
-        include: { hintRequests: { select: { level: true } } },
     });
     if (existing) {
-        return NextResponse.json(serializeSession(existing), { status: 200 });
+        // Reveals are shared per (user, challenge), so a resumed session shows
+        // hints/solution already viewed in any language.
+        const shared = await loadSharedReveals(userId, challengeSlug);
+        return NextResponse.json(serializeSession(existing, shared), {
+            status: 200,
+        });
     }
 
     // Seed fileState with the variant's editable files at their starting
@@ -83,5 +87,10 @@ export const POST = route(async (req: Request) => {
         },
     });
 
-    return NextResponse.json(serializeSession(created), { status: 201 });
+    // A brand-new session in a new language still inherits shared reveals for
+    // the challenge (a hint/solution seen in another language stays seen).
+    const shared = await loadSharedReveals(userId, challengeSlug);
+    return NextResponse.json(serializeSession(created, shared), {
+        status: 201,
+    });
 });
