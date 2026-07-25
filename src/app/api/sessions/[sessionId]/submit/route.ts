@@ -53,7 +53,10 @@ export const POST = route<RouteContext>(async (req, { params }) => {
         "Session has already been submitted",
     );
 
-    const challenge = requireChallenge(session.challengeSlug, session.language);
+    const challenge = await requireChallenge(
+        session.challengeSlug,
+        session.language,
+    );
     // Reveal penalties are shared per (user, challenge), across languages.
     const shared = await loadSharedReveals(userId, session.challengeSlug);
 

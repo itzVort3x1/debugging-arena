@@ -4,10 +4,10 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getChallenge, getAllChallengeMeta } from "@/lib/challenges/registry";
+import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import { loadDashboard, type DashboardSession } from "@/lib/dashboard";
 import { loadActivityCalendar } from "@/lib/activity";
-import type { Difficulty } from "@/types/challenge";
+import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import {
     ProgressRing,
     type DifficultyProgress,
@@ -48,11 +48,19 @@ export default async function DashboardPage() {
     const email = user?.email ?? session.user.email ?? null;
     const label = displayName({ name, email });
 
+    // Load every challenge's meta once and index it by slug; the dashboard's
+    // counts and each session card all resolve their meta from this map (no
+    // per-slug registry calls in render).
+    const allMeta = await getAllChallengeMeta();
+    const metaBySlug = new Map<string, ChallengeMeta>(
+        allMeta.map((m) => [m.slug, m]),
+    );
+
     // Per-difficulty totals from the registry; solved counts from the user's
     // best sessions. Order (easy/medium/hard) is enforced by ProgressRing.
     const order: Difficulty[] = ["easy", "medium", "hard"];
     const totals: Record<Difficulty, number> = { easy: 0, medium: 0, hard: 0 };
-    for (const m of getAllChallengeMeta()) totals[m.difficulty]++;
+    for (const m of allMeta) totals[m.difficulty]++;
     const solvedByDiff: Record<Difficulty, number> = {
         easy: 0,
         medium: 0,
@@ -62,23 +70,23 @@ export default async function DashboardPage() {
     // count each distinct challenge once for the difficulty breakdown.
     const solvedSlugs = Array.from(new Set(data.solved.map((s) => s.slug)));
     for (const slug of solvedSlugs) {
-        const c = getChallenge(slug);
-        if (c) solvedByDiff[c.meta.difficulty]++;
+        const c = metaBySlug.get(slug);
+        if (c) solvedByDiff[c.difficulty]++;
     }
     const byDifficulty: DifficultyProgress[] = order.map((difficulty) => ({
         difficulty,
         solved: solvedByDiff[difficulty],
         total: totals[difficulty],
     }));
-    const totalChallenges = getAllChallengeMeta().length;
+    const totalChallenges = allMeta.length;
 
     // Tech-stack breakdown across solved challenges (LeetCode's "Languages"
     // panel analog). A challenge can contribute several stack labels.
     const languageCounts = new Map<string, number>();
     for (const slug of solvedSlugs) {
-        const c = getChallenge(slug);
+        const c = metaBySlug.get(slug);
         if (!c) continue;
-        for (const tech of c.meta.stack) {
+        for (const tech of c.stack) {
             languageCounts.set(tech, (languageCounts.get(tech) ?? 0) + 1);
         }
     }
@@ -132,8 +140,14 @@ export default async function DashboardPage() {
                             avgScore={data.stats.avgScore}
                             totalTimeSeconds={data.stats.totalTimeSeconds}
                         />
-                        <ContinueSection sessions={data.inProgress} />
-                        <SolvedSection sessions={data.solved} />
+                        <ContinueSection
+                            sessions={data.inProgress}
+                            metaBySlug={metaBySlug}
+                        />
+                        <SolvedSection
+                            sessions={data.solved}
+                            metaBySlug={metaBySlug}
+                        />
                     </div>
                 </div>
             </div>
@@ -195,7 +209,13 @@ function StatStrip({
 
 // ---------------------- continue / solved ----------------------
 
-function ContinueSection({ sessions }: { sessions: DashboardSession[] }) {
+function ContinueSection({
+    sessions,
+    metaBySlug,
+}: {
+    sessions: DashboardSession[];
+    metaBySlug: Map<string, ChallengeMeta>;
+}) {
     return (
         <section>
             <SectionHeading
@@ -221,6 +241,7 @@ function ContinueSection({ sessions }: { sessions: DashboardSession[] }) {
                             key={s.sessionId}
                             session={s}
                             kind="resume"
+                            meta={metaBySlug.get(s.slug)}
                         />
                     ))}
                 </div>
@@ -229,7 +250,13 @@ function ContinueSection({ sessions }: { sessions: DashboardSession[] }) {
     );
 }
 
-function SolvedSection({ sessions }: { sessions: DashboardSession[] }) {
+function SolvedSection({
+    sessions,
+    metaBySlug,
+}: {
+    sessions: DashboardSession[];
+    metaBySlug: Map<string, ChallengeMeta>;
+}) {
     return (
         <section>
             <SectionHeading title="Solved" count={sessions.length} />
@@ -246,6 +273,7 @@ function SolvedSection({ sessions }: { sessions: DashboardSession[] }) {
                             key={s.sessionId}
                             session={s}
                             kind="solved"
+                            meta={metaBySlug.get(s.slug)}
                         />
                     ))}
                 </div>
@@ -276,18 +304,19 @@ const difficultyTone: Record<Difficulty, "success" | "warning" | "error"> = {
 function SessionCard({
     session,
     kind,
+    meta,
 }: {
     session: DashboardSession;
     kind: "resume" | "solved";
+    meta?: ChallengeMeta;
 }) {
-    const challenge = getChallenge(session.slug);
     // A session for a challenge that's since been removed from the registry.
-    if (!challenge) return null;
-    const { title, difficulty } = challenge.meta;
+    if (!meta) return null;
+    const { title, difficulty } = meta;
 
     // Only badge the language when the challenge actually offers more than one,
     // so single-language challenges look exactly as before.
-    const isMultiLanguage = (challenge.meta.languages?.length ?? 0) > 1;
+    const isMultiLanguage = (meta.languages?.length ?? 0) > 1;
     const languageLabel = isMultiLanguage ? runtimeLabel(session.language) : null;
 
     const href =

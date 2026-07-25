@@ -13,7 +13,7 @@ interface SessionUser {
 }
 
 export default async function HomePage() {
-    const challenges = getAllChallengeMeta();
+    const challenges = await getAllChallengeMeta();
     const session = await getServerSession(authOptions);
     const user: SessionUser | null = session?.user
         ? {

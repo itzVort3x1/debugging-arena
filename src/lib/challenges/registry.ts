@@ -1,8 +1,10 @@
 import {
-  listChallengeSlugs,
+  listChallengeRoots,
   loadChallenge,
-  listChallengeLanguages,
+  loadChallengeSummary,
+  type ChallengeSummary,
 } from "./loader";
+import { selectChallengeStore } from "./store/select";
 import type {
   ChallengeDefinition,
   ChallengeMeta,
@@ -10,10 +12,25 @@ import type {
 } from "../../../challenges/_schema";
 
 /**
- * One challenge, resolved across all the languages it can be solved in. The
- * `variants` map holds a fully-loaded ChallengeDefinition per language;
- * `languages` / `defaultLanguage` describe the set.
+ * The registry has two tiers so cloud reads stay cheap:
+ *
+ *   - Meta tier — a warmed index of every challenge's `ChallengeSummary`
+ *     (slug, languages, resolved `meta`). Cheap to build, needed everywhere
+ *     (listings, dashboard, difficulty counts).
+ *   - Content tier — the full `ChallengeDefinition` per language, loaded and
+ *     cached lazily per slug, only when the arena/run/result paths need it.
+ *
+ * Every accessor is async and awaits the index internally, so no caller has to
+ * remember a warm-up step. Caches live for the process lifetime (no TTL yet;
+ * invalidation is a later PR).
  */
+
+/** An index entry: the challenge summary plus its store-relative root path. */
+interface IndexEntry extends ChallengeSummary {
+  root: string;
+}
+
+/** One challenge, fully loaded across every language it offers. */
 interface ChallengeAggregate {
   slug: string;
   languages: Runtime[];
@@ -21,46 +38,113 @@ interface ChallengeAggregate {
   variants: Map<Runtime, ChallengeDefinition>;
 }
 
-let registry: Map<string, ChallengeAggregate> | null = null;
+let indexPromise: Promise<Map<string, IndexEntry>> | null = null;
+const aggregateCache = new Map<string, Promise<ChallengeAggregate>>();
 
-function buildAggregate(slug: string): ChallengeAggregate {
-  const languages = listChallengeLanguages(slug);
+async function buildIndex(): Promise<Map<string, IndexEntry>> {
+  const store = selectChallengeStore();
+  const roots = await listChallengeRoots(store);
+  const entries = await Promise.all(
+    roots.map(async (root) => ({
+      root,
+      summary: await loadChallengeSummary(store, root),
+    })),
+  );
+  const index = new Map<string, IndexEntry>();
+  for (const { root, summary } of entries) {
+    index.set(summary.slug, { ...summary, root });
+  }
+  return index;
+}
+
+/** Build (once) + return the meta index, retrying on a failed build. */
+function ensureIndex(): Promise<Map<string, IndexEntry>> {
+  if (!indexPromise) {
+    indexPromise = buildIndex().catch((err) => {
+      // Don't cache the failure - let the next request retry the load.
+      indexPromise = null;
+      throw err;
+    });
+  }
+  return indexPromise;
+}
+
+async function buildAggregate(entry: IndexEntry): Promise<ChallengeAggregate> {
+  const store = selectChallengeStore();
   const variants = new Map<Runtime, ChallengeDefinition>();
-  for (const lang of languages) {
-    variants.set(lang, loadChallenge(slug, lang));
+  for (const lang of entry.languages) {
+    variants.set(lang, await loadChallenge(store, entry.root, lang));
   }
-  // Every variant carries the same resolved defaultLanguage; read it off one.
-  const defaultLanguage = variants.get(languages[0])!.meta.defaultLanguage!;
-  return { slug, languages, defaultLanguage, variants };
+  return {
+    slug: entry.slug,
+    languages: entry.languages,
+    defaultLanguage: entry.defaultLanguage,
+    variants,
+  };
 }
 
-function getRegistry(): Map<string, ChallengeAggregate> {
-  if (!registry) {
-    registry = new Map();
-    for (const slug of listChallengeSlugs()) {
-      registry.set(slug, buildAggregate(slug));
-    }
+/** Load (once) + return the full aggregate for a slug, or undefined if unknown. */
+async function getAggregate(
+  slug: string,
+): Promise<ChallengeAggregate | undefined> {
+  const index = await ensureIndex();
+  const entry = index.get(slug);
+  if (!entry) return undefined;
+
+  let aggregate = aggregateCache.get(slug);
+  if (!aggregate) {
+    aggregate = buildAggregate(entry).catch((err) => {
+      aggregateCache.delete(slug); // allow a retry on the next request
+      throw err;
+    });
+    aggregateCache.set(slug, aggregate);
   }
-  return registry;
+  return aggregate;
 }
+
+// ----- Meta tier (warmed index; no file content) -----
+
+/** Warm the meta index. Optional - accessors warm it themselves. */
+export async function ensureChallengeIndex(): Promise<void> {
+  await ensureIndex();
+}
+
+/** Resolved `ChallengeMeta` for a slug, or undefined for an unknown slug. */
+export async function getChallengeMeta(
+  slug: string,
+): Promise<ChallengeMeta | undefined> {
+  const index = await ensureIndex();
+  return index.get(slug)?.meta;
+}
+
+/** Every challenge's resolved default-variant meta (listings/dashboards). */
+export async function getAllChallengeMeta(): Promise<ChallengeMeta[]> {
+  const index = await ensureIndex();
+  return Array.from(index.values()).map((e) => e.meta);
+}
+
+/** The languages a challenge offers, or undefined for an unknown slug. */
+export async function getChallengeLanguages(
+  slug: string,
+): Promise<Runtime[] | undefined> {
+  const index = await ensureIndex();
+  return index.get(slug)?.languages;
+}
+
+// ----- Content tier (full definitions, lazily loaded + cached) -----
 
 /**
  * Resolve a challenge for a given language, defaulting to its `defaultLanguage`
  * when omitted. Returns undefined for an unknown slug or an unavailable
  * language, so callers can 404 rather than throw.
  */
-export function getChallenge(
+export async function getChallenge(
   slug: string,
   language?: Runtime,
-): ChallengeDefinition | undefined {
-  const aggregate = getRegistry().get(slug);
+): Promise<ChallengeDefinition | undefined> {
+  const aggregate = await getAggregate(slug);
   if (!aggregate) return undefined;
   return aggregate.variants.get(language ?? aggregate.defaultLanguage);
-}
-
-/** The languages a challenge offers, or undefined for an unknown slug. */
-export function getChallengeLanguages(slug: string): Runtime[] | undefined {
-  return getRegistry().get(slug)?.languages;
 }
 
 /**
@@ -68,14 +152,15 @@ export function getChallengeLanguages(slug: string): Runtime[] | undefined {
  * whole set to the arena client so it can switch languages without a
  * round-trip. Returns undefined for an unknown slug.
  */
-export function getChallengeVariants(slug: string):
+export async function getChallengeVariants(slug: string): Promise<
   | {
       languages: Runtime[];
       defaultLanguage: Runtime;
       variants: Partial<Record<Runtime, ChallengeDefinition>>;
     }
-  | undefined {
-  const aggregate = getRegistry().get(slug);
+  | undefined
+> {
+  const aggregate = await getAggregate(slug);
   if (!aggregate) return undefined;
   const variants: Partial<Record<Runtime, ChallengeDefinition>> = {};
   aggregate.variants.forEach((def, lang) => {
@@ -86,15 +171,4 @@ export function getChallengeVariants(slug: string):
     defaultLanguage: aggregate.defaultLanguage,
     variants,
   };
-}
-
-/** Every challenge's default variant (used for listings/dashboards). */
-export function getAllChallenges(): ChallengeDefinition[] {
-  return Array.from(getRegistry().values()).map(
-    (a) => a.variants.get(a.defaultLanguage)!,
-  );
-}
-
-export function getAllChallengeMeta(): ChallengeMeta[] {
-  return getAllChallenges().map((c) => c.meta);
 }

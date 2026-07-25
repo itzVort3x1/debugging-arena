@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getChallenge } from "@/lib/challenges/registry";
+import { getChallenge, getChallengeMeta } from "@/lib/challenges/registry";
 import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 import { computeScore } from "@/lib/scoring";
 import { ResultView } from "./ResultView";
@@ -14,9 +14,11 @@ interface ResultPageProps {
 
 // Intentionally generic - the score is owner-only and must not leak into
 // public link previews. The page itself is auth-gated for the real data.
-export function generateMetadata({ params }: ResultPageProps): Metadata {
-    const challenge = getChallenge(params.slug);
-    const title = challenge ? `${challenge.meta.title} - Result` : "Result";
+export async function generateMetadata({
+    params,
+}: ResultPageProps): Promise<Metadata> {
+    const meta = await getChallengeMeta(params.slug);
+    const title = meta ? `${meta.title} - Result` : "Result";
     return {
         title,
         robots: { index: false, follow: false },
@@ -43,7 +45,7 @@ export default async function ResultPage({ params }: ResultPageProps) {
     if (!row || row.userId !== auth.user.id) notFound();
     if (row.challengeSlug !== params.slug) notFound();
 
-    const challenge = getChallenge(row.challengeSlug);
+    const challenge = await getChallenge(row.challengeSlug);
     if (!challenge) notFound();
 
     if (row.status !== "SUBMITTED") {

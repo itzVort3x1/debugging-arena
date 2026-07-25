@@ -30,7 +30,7 @@ export const POST = route(async (req: Request) => {
 
     // A missing challenge here is a bad client-supplied slug, so 404 (unlike
     // the 500 used when a stored session references an unregistered slug).
-    const languages = getChallengeLanguages(challengeSlug);
+    const languages = await getChallengeLanguages(challengeSlug);
     if (!languages) {
         throw new HttpError(404, "Challenge not found");
     }
@@ -42,7 +42,10 @@ export const POST = route(async (req: Request) => {
     }
 
     // Resolve the variant: the requested language, or the challenge's default.
-    const challenge = getChallenge(challengeSlug, language as Runtime | undefined);
+    const challenge = await getChallenge(
+        challengeSlug,
+        language as Runtime | undefined,
+    );
     if (!challenge) {
         throw new HttpError(404, "Challenge not found");
     }

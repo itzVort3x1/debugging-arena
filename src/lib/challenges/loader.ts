@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import {
   RUNTIMES,
   type ChallengeDefinition,
@@ -8,18 +6,25 @@ import {
   type HintLevel,
   type Runtime,
 } from "../../../challenges/_schema";
+import type { ChallengeStore } from "./store/types";
 
 /**
- * Filesystem-backed loader for challenge definitions.
+ * Store-backed loader for challenge definitions. Reads every file through a
+ * {@link ChallengeStore} (local filesystem, or a remote store later), so the
+ * layout logic below is source-agnostic. All paths are store-relative and use
+ * forward slashes; the store maps them onto its own root.
  *
- * Single-language challenge (legacy layout) — /challenges/<slug>/:
+ * A challenge lives under a root path (`<slug>` today; `<difficulty>/<slug>`
+ * once the cloud layout lands) with this shape:
+ *
+ * Single-language (legacy) — <root>/:
  *   meta.json
  *   description.md
  *   hints.json   ({ "hints": HintLevel[] })
  *   files/...    editable source files (sandbox path: rel path under files/)
  *   tests/...    read-only test files (sandbox path: "tests/" + rel path)
  *
- * Multi-language challenge — /challenges/<slug>/:
+ * Multi-language — <root>/:
  *   meta.json          shared (may set "languages" + "defaultLanguage")
  *   description.md      shared
  *   <lang>/            one per language (node/, python/, …), each holding
@@ -27,15 +32,13 @@ import {
  *   hints.json          optional shared fallback used by a variant with none
  *   solution.md         optional shared fallback
  *
- * A challenge is treated as multi-language iff it has at least one runtime-named
- * subdir (node/, python/, …) containing files/ or tests/. Otherwise it's the
- * legacy single-language layout and loads exactly as before.
+ * A challenge is multi-language iff it has at least one runtime-named subdir
+ * (node/, python/, …) containing files/ or tests/; otherwise it's the legacy
+ * single-language layout and loads exactly as before.
  *
  * Directories starting with "_" or "." are ignored (so `_schema.ts` and test
  * fixtures are not picked up by the registry).
  */
-
-const CHALLENGES_DIR = path.join(process.cwd(), "challenges");
 
 const EXT_TO_LANGUAGE: Record<string, string> = {
   ".ts": "typescript",
@@ -53,79 +56,93 @@ const EXT_TO_LANGUAGE: Record<string, string> = {
   ".rs": "rust",
 };
 
+function extname(p: string): string {
+  const dot = p.lastIndexOf(".");
+  const slash = p.lastIndexOf("/");
+  return dot > slash ? p.slice(dot).toLowerCase() : "";
+}
+
 function languageFromPath(filePath: string): string {
-  return EXT_TO_LANGUAGE[path.extname(filePath).toLowerCase()] ?? "plaintext";
+  return EXT_TO_LANGUAGE[extname(filePath)] ?? "plaintext";
 }
 
-interface WalkedFile {
-  absPath: string;
-  /** Path relative to the walk root, using forward slashes. */
-  relPath: string;
+/** Join store-relative segments with forward slashes, skipping empties. */
+function join(...segments: string[]): string {
+  return segments.filter(Boolean).join("/");
 }
 
-function walkDir(root: string): WalkedFile[] {
-  const out: WalkedFile[] = [];
-  const stack: string[] = [root];
+/**
+ * Recursively collect file paths under `root`, relative to `root` (forward
+ * slashes). A missing `root` yields `[]`.
+ */
+async function walk(store: ChallengeStore, root: string): Promise<string[]> {
+  const out: string[] = [];
+  const stack: string[] = [""]; // sub-paths relative to root
   while (stack.length) {
-    const dir = stack.pop()!;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const abs = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(abs);
-      } else if (entry.isFile()) {
-        out.push({
-          absPath: abs,
-          relPath: path.relative(root, abs).split(path.sep).join("/"),
-        });
-      }
+    const rel = stack.pop()!;
+    const entries = await store.list(join(root, rel));
+    for (const entry of entries) {
+      const childRel = join(rel, entry.name);
+      if (entry.isDir) stack.push(childRel);
+      else out.push(childRel);
     }
   }
   return out;
 }
 
 /** Editable source files, read from `<variantRoot>/files`. */
-function loadEditableFiles(variantRoot: string): ChallengeFile[] {
-  const filesDir = path.join(variantRoot, "files");
-  if (!fs.existsSync(filesDir)) return [];
-  return walkDir(filesDir).map(({ absPath, relPath }) => ({
-    path: relPath,
-    content: fs.readFileSync(absPath, "utf-8"),
-    readOnly: false,
-    language: languageFromPath(relPath),
-  }));
+async function loadEditableFiles(
+  store: ChallengeStore,
+  variantRoot: string,
+): Promise<ChallengeFile[]> {
+  const filesRoot = join(variantRoot, "files");
+  const rels = await walk(store, filesRoot);
+  return Promise.all(
+    rels.map(async (rel) => ({
+      path: rel,
+      content: (await store.readText(join(filesRoot, rel))) ?? "",
+      readOnly: false,
+      language: languageFromPath(rel),
+    })),
+  );
 }
 
 /** Read-only test files, read from `<variantRoot>/tests`. */
-function loadTestFiles(variantRoot: string): ChallengeFile[] {
-  const testsDir = path.join(variantRoot, "tests");
-  if (!fs.existsSync(testsDir)) return [];
-  return walkDir(testsDir).map(({ absPath, relPath }) => ({
-    path: "tests/" + relPath,
-    content: fs.readFileSync(absPath, "utf-8"),
-    readOnly: true,
-    language: languageFromPath(relPath),
-  }));
+async function loadTestFiles(
+  store: ChallengeStore,
+  variantRoot: string,
+): Promise<ChallengeFile[]> {
+  const testsRoot = join(variantRoot, "tests");
+  const rels = await walk(store, testsRoot);
+  return Promise.all(
+    rels.map(async (rel) => ({
+      path: "tests/" + rel,
+      content: (await store.readText(join(testsRoot, rel))) ?? "",
+      readOnly: true,
+      language: languageFromPath(rel),
+    })),
+  );
 }
 
-function readJson<T>(filePath: string): T {
-  const raw = fs.readFileSync(filePath, "utf-8");
+async function readJson<T>(store: ChallengeStore, path: string): Promise<T> {
+  const raw = await store.readText(path);
+  if (raw === undefined) throw new Error(`Challenge file not found: ${path}`);
   try {
     return JSON.parse(raw) as T;
   } catch (err) {
-    throw new Error(`Invalid JSON in ${filePath}: ${(err as Error).message}`);
+    throw new Error(`Invalid JSON in ${path}: ${(err as Error).message}`);
   }
 }
 
-function isDir(p: string): boolean {
-  return fs.existsSync(p) && fs.statSync(p).isDirectory();
-}
-
 /** True if `<dir>/<runtime>` holds a variant (has a files/ or tests/ subdir). */
-function hasVariantDir(dir: string, runtime: Runtime): boolean {
-  const variant = path.join(dir, runtime);
-  return (
-    isDir(variant) &&
-    (isDir(path.join(variant, "files")) || isDir(path.join(variant, "tests")))
+async function hasVariantDir(
+  store: ChallengeStore,
+  dir: string,
+  runtime: Runtime,
+): Promise<boolean> {
+  const entries = await store.list(join(dir, runtime));
+  return entries.some(
+    (e) => e.isDir && (e.name === "files" || e.name === "tests"),
   );
 }
 
@@ -134,11 +151,15 @@ function hasVariantDir(dir: string, runtime: Runtime): boolean {
  * Multi-language: the runtime-named subdirs present (ordered by meta.languages
  * if the author fixed an order). Legacy: the single `meta.runtime` (or node).
  */
-function resolveLanguages(
-  dir: string,
+async function resolveLanguages(
+  store: ChallengeStore,
+  root: string,
   meta: ChallengeMeta,
-): { languages: Runtime[]; defaultLanguage: Runtime } {
-  const discovered = RUNTIMES.filter((r) => hasVariantDir(dir, r));
+): Promise<{ languages: Runtime[]; defaultLanguage: Runtime }> {
+  const discovered: Runtime[] = [];
+  for (const r of RUNTIMES) {
+    if (await hasVariantDir(store, root, r)) discovered.push(r);
+  }
 
   let languages: Runtime[];
   if (discovered.length > 0) {
@@ -157,55 +178,84 @@ function resolveLanguages(
   return { languages, defaultLanguage };
 }
 
-/** Read a file if it exists at the variant root, else fall back to the shared root. */
-function readWithFallback(
+/** Read a file at the variant root, else fall back to the shared root. */
+async function readWithFallback(
+  store: ChallengeStore,
   variantRoot: string,
-  dir: string,
+  root: string,
   name: string,
-): string | undefined {
-  const atVariant = path.join(variantRoot, name);
-  if (fs.existsSync(atVariant)) return fs.readFileSync(atVariant, "utf-8");
-  const atShared = path.join(dir, name);
-  if (fs.existsSync(atShared)) return fs.readFileSync(atShared, "utf-8");
-  return undefined;
+): Promise<string | undefined> {
+  const atVariant = await store.readText(join(variantRoot, name));
+  if (atVariant !== undefined) return atVariant;
+  return store.readText(join(root, name));
+}
+
+/** The trailing path segment of a challenge root is its slug. */
+function slugOf(root: string): string {
+  return root.split("/").filter(Boolean).pop() ?? root;
+}
+
+/** Read + resolve a challenge's meta and language set (no files/tests). */
+async function loadMeta(
+  store: ChallengeStore,
+  root: string,
+): Promise<{ meta: ChallengeMeta; languages: Runtime[]; defaultLanguage: Runtime }> {
+  const slug = slugOf(root);
+  const meta = await readJson<ChallengeMeta>(store, join(root, "meta.json"));
+  if (meta.slug !== slug) {
+    throw new Error(
+      `Challenge slug mismatch: path "${root}" but meta.slug is "${meta.slug}"`,
+    );
+  }
+  const { languages, defaultLanguage } = await resolveLanguages(
+    store,
+    root,
+    meta,
+  );
+  return { meta, languages, defaultLanguage };
 }
 
 /**
- * The languages a challenge can be solved in, cheaply (reads meta + dir
- * structure only, not the files/tests).
+ * A challenge's resolved summary: its language set + a `ChallengeMeta` carrying
+ * the resolved `runtime` (= defaultLanguage), `languages`, and
+ * `defaultLanguage`. Cheap — reads meta + dir structure only, not files/tests.
+ * Backs the registry's meta tier.
  */
-export function listChallengeLanguages(slug: string): Runtime[] {
-  const dir = path.join(CHALLENGES_DIR, slug);
-  if (!isDir(dir)) {
-    throw new Error(`Challenge directory not found: ${slug}`);
-  }
-  const meta = readJson<ChallengeMeta>(path.join(dir, "meta.json"));
-  return resolveLanguages(dir, meta).languages;
+export interface ChallengeSummary {
+  slug: string;
+  languages: Runtime[];
+  defaultLanguage: Runtime;
+  meta: ChallengeMeta;
+}
+
+export async function loadChallengeSummary(
+  store: ChallengeStore,
+  root: string,
+): Promise<ChallengeSummary> {
+  const { meta, languages, defaultLanguage } = await loadMeta(store, root);
+  return {
+    slug: meta.slug,
+    languages,
+    defaultLanguage,
+    meta: { ...meta, runtime: defaultLanguage, languages, defaultLanguage },
+  };
 }
 
 /**
  * Load a challenge for a specific language (defaults to its `defaultLanguage`).
  * The returned `meta` always carries the resolved `runtime`, `languages`, and
  * `defaultLanguage`, so callers see a uniform shape for single- and
- * multi-language challenges alike.
+ * multi-language challenges alike. `root` is the challenge's store-relative
+ * root path (`<slug>` today).
  */
-export function loadChallenge(
-  slug: string,
+export async function loadChallenge(
+  store: ChallengeStore,
+  root: string,
   language?: Runtime,
-): ChallengeDefinition {
-  const dir = path.join(CHALLENGES_DIR, slug);
-  if (!isDir(dir)) {
-    throw new Error(`Challenge directory not found: ${slug}`);
-  }
+): Promise<ChallengeDefinition> {
+  const slug = slugOf(root);
+  const { meta, languages, defaultLanguage } = await loadMeta(store, root);
 
-  const meta = readJson<ChallengeMeta>(path.join(dir, "meta.json"));
-  if (meta.slug !== slug) {
-    throw new Error(
-      `Challenge slug mismatch: directory "${slug}" but meta.slug is "${meta.slug}"`,
-    );
-  }
-
-  const { languages, defaultLanguage } = resolveLanguages(dir, meta);
   const runtime = language ?? defaultLanguage;
   if (!languages.includes(runtime)) {
     throw new Error(
@@ -213,14 +263,18 @@ export function loadChallenge(
     );
   }
 
-  // Multi-language variants live in <dir>/<runtime>; legacy files sit at <dir>.
-  const isMultiLanguage = languages.length > 1 || hasVariantDir(dir, runtime);
-  const variantRoot = isMultiLanguage ? path.join(dir, runtime) : dir;
+  // Multi-language variants live in <root>/<runtime>; legacy files sit at <root>.
+  const isMultiLanguage =
+    languages.length > 1 || (await hasVariantDir(store, root, runtime));
+  const variantRoot = isMultiLanguage ? join(root, runtime) : root;
 
   // description.md is shared across variants (top-level).
-  const description = fs.readFileSync(path.join(dir, "description.md"), "utf-8");
+  const description = await store.readText(join(root, "description.md"));
+  if (description === undefined) {
+    throw new Error(`Challenge file not found: ${join(root, "description.md")}`);
+  }
 
-  const hintsRaw = readWithFallback(variantRoot, dir, "hints.json");
+  const hintsRaw = await readWithFallback(store, variantRoot, root, "hints.json");
   let hints: HintLevel[] = [];
   if (hintsRaw) {
     try {
@@ -232,30 +286,40 @@ export function loadChallenge(
     }
   }
 
-  const solution = readWithFallback(variantRoot, dir, "solution.md");
+  const solution = await readWithFallback(
+    store,
+    variantRoot,
+    root,
+    "solution.md",
+  );
+
+  const [files, testFiles] = await Promise.all([
+    loadEditableFiles(store, variantRoot),
+    loadTestFiles(store, variantRoot),
+  ]);
 
   return {
     meta: { ...meta, runtime, languages, defaultLanguage },
     description,
-    files: loadEditableFiles(variantRoot),
-    testFiles: loadTestFiles(variantRoot),
+    files,
+    testFiles,
     hints,
     solution,
   };
 }
 
-export function listChallengeSlugs(): string[] {
-  if (!fs.existsSync(CHALLENGES_DIR)) return [];
-  return fs
-    .readdirSync(CHALLENGES_DIR, { withFileTypes: true })
+/**
+ * The store-relative root path of every challenge. Today the challenges live
+ * flat under the store root (root === slug); directories starting with "_" or
+ * "." are ignored. (Replaced by a manifest read once the cloud layout lands.)
+ */
+export async function listChallengeRoots(
+  store: ChallengeStore,
+): Promise<string[]> {
+  const entries = await store.list("");
+  return entries
     .filter(
-      (d) =>
-        d.isDirectory() && !d.name.startsWith("_") && !d.name.startsWith("."),
+      (e) => e.isDir && !e.name.startsWith("_") && !e.name.startsWith("."),
     )
-    .map((d) => d.name);
-}
-
-/** Every challenge's default variant (used for listings). */
-export function loadAllChallenges(): ChallengeDefinition[] {
-  return listChallengeSlugs().map((slug) => loadChallenge(slug));
+    .map((e) => e.name);
 }
