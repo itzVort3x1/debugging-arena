@@ -10,7 +10,14 @@ interface FileResultPayload {
     durationMs: number;
 }
 
-const RUNNABLE_RE = /\.(ts|tsx|js|mjs|cjs)$/;
+const RUNNABLE_RE = /\.(ts|tsx|js|mjs|cjs|py)$/;
+
+/** The command shown in the terminal header for an editable file's run. */
+function runHeader(entryPath: string): string {
+    return entryPath.endsWith(".py")
+        ? `$ python ${entryPath}`
+        : `$ ts-node ${entryPath}`;
+}
 
 export function RunFileButton() {
     const { pending, locked, runningElsewhere, start } = useRunAction();
@@ -35,7 +42,7 @@ export function RunFileButton() {
                 entryPath: activeFile,
                 fileState: fileContents,
             },
-            header: `$ ts-node ${activeFile}`,
+            header: runHeader(activeFile),
             onResult: (data) => {
                 const r = data as FileResultPayload;
                 return [
@@ -50,7 +57,7 @@ export function RunFileButton() {
     const title = locked
         ? "Session submitted - read only"
         : !isRunnable
-          ? "Open an editable .ts/.js file to run it"
+          ? "Open an editable source file to run it"
           : `Run ${activeFile}`;
 
     return (

@@ -52,6 +52,19 @@ export const pythonRunner: LanguageRunner = {
         };
     },
 
+    fileCommand(_env: ExecEnv, workDir: string, entryPath: string): RunCommand {
+        return {
+            cmd: "python",
+            // `-u` forces unbuffered stdio so prints stream live to the
+            // terminal instead of arriving all at once when the process exits.
+            args: ["-u", `${workDir}/${entryPath}`],
+            env: {
+                // Force color despite no TTY, matching the node runner's feel.
+                PY_COLORS: "1",
+            },
+        };
+    },
+
     async parseResults(sandboxDir: string): Promise<TestCounts> {
         try {
             const xml = await fs.readFile(
