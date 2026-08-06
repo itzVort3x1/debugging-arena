@@ -23,6 +23,12 @@ model User {
   image        String?
   passwordHash String?
   createdAt    DateTime @default(now())
+  // Authorization role: USER | ADMIN. Admins may author challenges through the
+  // admin UI, which writes code the runner later executes — so the role is
+  // read from this column on every admin request rather than trusted from the
+  // JWT, which would keep saying ADMIN until it expired after a demotion.
+  // A plain String, matching how the other enums in this schema are stored.
+  role         String   @default("USER")
 
   sessions          DebugSession[]
   accounts          Account[]
