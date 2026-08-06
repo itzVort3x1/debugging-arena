@@ -24,10 +24,10 @@ model User {
   passwordHash String?
   createdAt    DateTime @default(now())
 
-  sessions     DebugSession[]
-  accounts     Account[]
-  authSessions Session[]
-  hintRequests HintRequest[]
+  sessions          DebugSession[]
+  accounts          Account[]
+  authSessions      Session[]
+  hintRequests      HintRequest[]
   challengeProgress UserChallengeProgress[]
 }
 
@@ -71,21 +71,21 @@ model VerificationToken {
 // ----- Domain tables -----
 
 model DebugSession {
-  id            String        @id @default(cuid())
+  id            String    @id @default(cuid())
   userId        String
   challengeSlug String
   // Language variant this session solves the challenge in (a Runtime value).
   // A challenge is one session per (userId, challengeSlug, language), so the
   // same challenge can be solved independently in each language it offers.
-  language      String        @default("node")
-  status        String        @default("IN_PROGRESS") // SessionStatus enum (string for SQLite)
-  startedAt     DateTime      @default(now())
+  language      String    @default("node")
+  status        String    @default("IN_PROGRESS") // SessionStatus enum (string for SQLite)
+  startedAt     DateTime  @default(now())
   completedAt   DateTime?
-  hintsUsed     Int           @default(0)
-  attemptsCount Int           @default(0)
+  hintsUsed     Int       @default(0)
+  attemptsCount Int       @default(0)
   timeTaken     Int? // seconds
   score         Int?
-  fileState     String        @default("{}") // JSON-encoded Record<filename, content>
+  fileState     String    @default("{}") // JSON-encoded Record<filename, content>
 
   // Denormalized summary of the most recent test run. TestRun keeps full
   // history (Phase 7); these fields exist for O(1) badge reads.
@@ -118,7 +118,7 @@ model TestRun {
 }
 
 model HintRequest {
-  id          String   @id @default(cuid())
+  id            String   @id @default(cuid())
   // Hint reveals are SHARED per (user, challenge): viewing a hint in one
   // language shows it viewed in every language and its penalty applies to
   // every language's score. Keyed on (userId, challengeSlug, level).
@@ -126,9 +126,9 @@ model HintRequest {
   challengeSlug String
   // The session the reveal was made from, kept for audit only. Nullable and
   // SET NULL on delete so the shared reveal survives its originating session.
-  sessionId   String?
-  level       Int
-  requestedAt DateTime @default(now())
+  sessionId     String?
+  level         Int
+  requestedAt   DateTime @default(now())
 
   user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   session DebugSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
@@ -162,4 +162,69 @@ model Postmortem {
   generatedAt DateTime @default(now())
 
   session DebugSession @relation(fields: [sessionId], references: [id])
+}
+
+// ----- Challenge content -----
+//
+// Postgres is the source of truth for challenge definitions (see
+// POSTGRES_CHALLENGES_PLAN.md). Challenges are authored through the admin UI
+// rather than committed to the repo, so the review/CI/history/rollback that git
+// used to provide live here instead: `status` gates publication, `version` plus
+// ChallengeVersion give history and restore, and every write validates through
+// loader.ts before it is accepted.
+
+model Challenge {
+  slug String @id
+
+  // Meta projection of `content["meta.json"]`. These exist so listings can
+  // filter/sort in SQL and so PostgresStore can synthesize the registry index
+  // in a single query. Rewritten from the tree in the SAME transaction as
+  // `content`, by the one code path that writes — unlike the old index.json
+  // artifact, there is no window in which they can drift.
+  title           String
+  difficulty      String // Difficulty: easy | medium | hard
+  tags            String[]
+  timeLimit       Int // seconds
+  stack           String[]
+  issueContext    String
+  languages       String[] // Runtime[], as resolved by loader.ts
+  defaultLanguage String
+
+  // The raw challenge file tree: { "<path>": "<content>" }, paths relative to
+  // the challenge root with forward slashes ("meta.json", "files/src/x.ts").
+  // Stored raw rather than as a parsed ChallengeDefinition so loader.ts stays
+  // the single authority on how a tree becomes a challenge.
+  content Json
+
+  status      String    @default("DRAFT") // DRAFT | PUBLISHED
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+
+  versions ChallengeVersion[]
+
+  @@index([status])
+}
+
+// Immutable snapshot of a challenge at one version. Written on every publish so
+// history survives, and so a restore needs nothing but this row.
+model ChallengeVersion {
+  id            String @id @default(cuid())
+  challengeSlug String
+  version       Int
+
+  // Full snapshot: the file tree plus the meta projection as it stood.
+  content Json
+  meta    Json
+
+  createdAt   DateTime @default(now())
+  // User.id of the author; null for rows written by the import script. Kept as
+  // a plain string (no relation) until PR B introduces admin roles.
+  createdById String?
+  note        String?
+
+  challenge Challenge @relation(fields: [challengeSlug], references: [slug], onDelete: Cascade)
+
+  @@unique([challengeSlug, version])
 }

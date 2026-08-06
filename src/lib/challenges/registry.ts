@@ -150,15 +150,20 @@ async function ensureIndex(): Promise<Map<string, IndexEntry>> {
 
 /**
  * Drop all cached challenge data (index + loaded content) so the next access
- * reloads from the store. Used by the admin revalidate hook after seeding new
- * content. Per-instance: in a multi-instance deploy each instance must be
+ * reloads from the store. Used by the admin revalidate hook after content
+ * changes. Per-instance: in a multi-instance deploy each instance must be
  * invalidated (or wait out the TTL).
+ *
+ * Also clears the store's own cache where it has one (PostgresStore memoizes
+ * rows). Without that, clearing the registry would just refill it from stale
+ * data held one layer down.
  */
 export function invalidateChallengeCache(): void {
   indexCache = null;
   indexInit = null;
   indexRefresh = null;
   aggregateCache.clear();
+  selectChallengeStore().invalidate?.();
 }
 
 async function buildAggregate(entry: IndexEntry): Promise<ChallengeAggregate> {

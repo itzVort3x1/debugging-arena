@@ -32,4 +32,15 @@ export interface ChallengeStore {
    * optional dirs (e.g. a `python/` variant) without a separate check.
    */
   list(path: string): Promise<ChallengeEntry[]>;
+
+  /**
+   * Drop anything the store itself has cached, so the next read hits the
+   * underlying source. Optional: stores that hold no state (filesystem,
+   * Supabase Storage) omit it.
+   *
+   * The store is a process-wide singleton, so a store that memoizes rows would
+   * otherwise keep serving stale content after
+   * {@link invalidateChallengeCache} cleared the registry above it.
+   */
+  invalidate?(): void;
 }
