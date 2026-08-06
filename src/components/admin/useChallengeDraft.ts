@@ -33,6 +33,12 @@ export interface ChallengeDraft {
   setFile: (path: string, content: string) => void;
   addFile: (path: string) => void;
   deleteFile: (path: string) => void;
+  /**
+   * Replace the whole working tree, e.g. loading an old version from history.
+   * Deliberately does not save: the result shows up as unsaved changes for the
+   * author to review, then save or publish through the normal path.
+   */
+  loadTree: (tree: ChallengeTree, notice?: string) => void;
   validate: () => Promise<void>;
   save: (status: ChallengeStatus) => Promise<void>;
 }
@@ -112,6 +118,15 @@ export function useChallengeDraft({
     [activePath],
   );
 
+  const loadTree = useCallback((next: ChallengeTree, message?: string) => {
+    setTree(next);
+    setErrors(null);
+    setNotice(message ?? null);
+    setActivePath((current) =>
+      next[current] !== undefined ? current : (sortedPaths(next)[0] ?? ""),
+    );
+  }, []);
+
   const validate = useCallback(async () => {
     setBusy("validate");
     setNotice(null);
@@ -175,6 +190,7 @@ export function useChallengeDraft({
     setFile,
     addFile,
     deleteFile,
+    loadTree,
     validate,
     save,
   };

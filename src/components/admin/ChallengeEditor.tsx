@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { CodeEditor } from "@/components/ide/CodeEditor";
 import { languageFromPath } from "@/lib/challenges/loader";
 import { ChallengeEditorToolbar } from "./ChallengeEditorToolbar";
 import { ChallengeFileTree } from "./ChallengeFileTree";
+import { ChallengeHistoryPanel } from "./ChallengeHistoryPanel";
 import { ValidationSummary } from "./ValidationSummary";
 import {
   useChallengeDraft,
@@ -38,6 +40,7 @@ export function ChallengeEditor({
     initialStatus,
     initialVersion: version,
   });
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   return (
     <div className="flex h-[calc(100vh-3.25rem)] flex-col">
@@ -48,6 +51,8 @@ export function ChallengeEditor({
         status={draft.status}
         dirty={draft.dirty}
         busy={draft.busy}
+        historyOpen={historyOpen}
+        onToggleHistory={() => setHistoryOpen((open) => !open)}
         onValidate={draft.validate}
         onSave={draft.save}
       />
@@ -78,6 +83,15 @@ export function ChallengeEditor({
             </div>
           )}
         </div>
+
+        {historyOpen ? (
+          <ChallengeHistoryPanel
+            slug={slug}
+            currentTree={draft.tree}
+            onLoad={draft.loadTree}
+            onClose={() => setHistoryOpen(false)}
+          />
+        ) : null}
       </div>
     </div>
   );

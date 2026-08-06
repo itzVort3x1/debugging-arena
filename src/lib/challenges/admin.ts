@@ -70,6 +70,86 @@ export async function getChallengeForAdmin(
   return { ...row, content: asTree(row.content) };
 }
 
+export interface ChallengeVersionSummary {
+  version: number;
+  createdAt: Date;
+  note: string | null;
+  /** Author's email, or null when unknown (imported, or the user was deleted). */
+  authorEmail: string | null;
+}
+
+/**
+ * A challenge's published history, newest first.
+ *
+ * `ChallengeVersion.createdById` is deliberately not a foreign key (see the
+ * migration), so the author is resolved with a second lookup and degrades to
+ * null rather than breaking the list when a user no longer exists.
+ */
+export async function listChallengeVersions(
+  slug: string,
+): Promise<ChallengeVersionSummary[]> {
+  const rows = await prisma.challengeVersion.findMany({
+    where: { challengeSlug: slug },
+    select: { version: true, createdAt: true, note: true, createdById: true },
+    orderBy: { version: "desc" },
+  });
+
+  const authorIds = Array.from(
+    new Set(rows.map((r) => r.createdById).filter((id): id is string => !!id)),
+  );
+  const authors = authorIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: authorIds } },
+        select: { id: true, email: true },
+      })
+    : [];
+  const emailById = new Map(authors.map((a) => [a.id, a.email]));
+
+  return rows.map((r) => ({
+    version: r.version,
+    createdAt: r.createdAt,
+    note: r.note,
+    authorEmail: r.createdById ? (emailById.get(r.createdById) ?? null) : null,
+  }));
+}
+
+export interface ChallengeVersionDetail extends ChallengeVersionSummary {
+  content: ChallengeTree;
+}
+
+/** One snapshot with its full tree, or null when that version doesn't exist. */
+export async function getChallengeVersion(
+  slug: string,
+  version: number,
+): Promise<ChallengeVersionDetail | null> {
+  const row = await prisma.challengeVersion.findUnique({
+    where: { challengeSlug_version: { challengeSlug: slug, version } },
+    select: {
+      version: true,
+      createdAt: true,
+      note: true,
+      createdById: true,
+      content: true,
+    },
+  });
+  if (!row) return null;
+
+  const author = row.createdById
+    ? await prisma.user.findUnique({
+        where: { id: row.createdById },
+        select: { email: true },
+      })
+    : null;
+
+  return {
+    version: row.version,
+    createdAt: row.createdAt,
+    note: row.note,
+    authorEmail: author?.email ?? null,
+    content: asTree(row.content),
+  };
+}
+
 export interface CreateChallengeInput {
   slug: string;
   tree: ChallengeTree;
