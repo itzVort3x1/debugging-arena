@@ -70,6 +70,95 @@ export async function getChallengeForAdmin(
   return { ...row, content: asTree(row.content) };
 }
 
+export interface CreateChallengeInput {
+  slug: string;
+  tree: ChallengeTree;
+  /** Author, recorded on the first version snapshot. */
+  userId: string;
+}
+
+export type CreateChallengeResult =
+  | { created: true }
+  | { created: false; reason: "taken" | "invalid"; errors: string[] };
+
+/**
+ * Create a challenge from a scaffolded tree, always as a DRAFT.
+ *
+ * The tree must validate: unlike an edit, there is no earlier good version to
+ * fall back on, and the meta projection columns are NOT NULL — an unparseable
+ * `meta.json` leaves nothing to write into them. The scaffold always validates,
+ * so this only rejects a hand-crafted request.
+ *
+ * No cache invalidation: a draft is not in the published set, so nothing the
+ * app can see has changed.
+ */
+export async function createChallenge(
+  input: CreateChallengeInput,
+): Promise<CreateChallengeResult> {
+  const { slug, tree, userId } = input;
+
+  const validation = await validateChallengeTree(slug, tree);
+  if (!validation.ok || !validation.summary) {
+    return { created: false, reason: "invalid", errors: validation.errors };
+  }
+
+  const { summary } = validation;
+  try {
+    await prisma.challenge.create({
+      data: {
+        slug,
+        title: summary.meta.title,
+        difficulty: summary.meta.difficulty,
+        tags: summary.meta.tags,
+        timeLimit: summary.meta.timeLimit,
+        stack: summary.meta.stack,
+        issueContext: summary.meta.issueContext,
+        languages: summary.languages,
+        defaultLanguage: summary.defaultLanguage,
+        content: tree,
+        status: "DRAFT",
+        version: 1,
+        versions: {
+          create: {
+            version: 1,
+            content: tree,
+            meta: {
+              title: summary.meta.title,
+              difficulty: summary.meta.difficulty,
+              tags: summary.meta.tags,
+              timeLimit: summary.meta.timeLimit,
+              stack: summary.meta.stack,
+              issueContext: summary.meta.issueContext,
+              languages: summary.languages,
+              defaultLanguage: summary.defaultLanguage,
+            },
+            createdById: userId,
+            note: "Created from scaffold",
+          },
+        },
+      },
+    });
+  } catch (err) {
+    // Unique violation on the primary key — the slug was taken, possibly
+    // between the caller's check and this insert.
+    if (isUniqueViolation(err)) {
+      return { created: false, reason: "taken", errors: [] };
+    }
+    throw err;
+  }
+
+  return { created: true };
+}
+
+/** Prisma's unique-constraint error, without importing the error class. */
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { code?: string }).code === "P2002"
+  );
+}
+
 export interface SaveChallengeInput {
   slug: string;
   tree: ChallengeTree;

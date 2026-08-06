@@ -17,6 +17,13 @@ const RUNNERS: Partial<Record<Runtime, LanguageRunner>> = {
 export const DEFAULT_RUNTIME: Runtime = "node";
 
 /**
+ * Runtimes that can actually execute today. Derived from the registry above so
+ * it cannot drift: the admin "new challenge" form offers exactly these, which
+ * stops an author creating a challenge whose tests could never run.
+ */
+export const SUPPORTED_RUNTIMES = Object.keys(RUNNERS) as Runtime[];
+
+/**
  * Resolve the runner for a challenge's declared runtime, defaulting to
  * "node" when unset. Throws for a declared-but-unimplemented runtime so a
  * misconfigured challenge fails loudly rather than silently running nothing.
