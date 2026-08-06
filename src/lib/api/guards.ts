@@ -1,8 +1,7 @@
 import type { z } from "zod";
 import type { ChallengeDefinition, Runtime } from "../../../challenges/_schema";
-import { getSessionUserId } from "@/lib/auth-helpers";
+import { getAdminUserId, getSessionUserId } from "@/lib/auth-helpers";
 import { getChallenge, getChallengeLanguages } from "@/lib/challenges/registry";
-import { prisma } from "@/lib/prisma";
 import { HttpError } from "./http";
 
 /**
@@ -18,9 +17,6 @@ export async function requireUserId(): Promise<string> {
     return userId;
 }
 
-/** The privileged value of `User.role`. Everyone else is "USER". */
-export const ADMIN_ROLE = "ADMIN";
-
 /**
  * Require an authenticated admin, returning their user id.
  *
@@ -29,22 +25,12 @@ export const ADMIN_ROLE = "ADMIN";
  * don't-leak reasoning as `assertOwned`, and it matches the revalidate route,
  * which 404s when its secret is unset.
  *
- * The role is read from the database on every call rather than carried in the
- * session token. Sessions here are JWT-backed (see `authOptions`), so a role
- * baked into the token would keep saying ADMIN until that token expired, even
- * after a demotion. Admin traffic is low and this is a primary-key lookup, so
- * paying for one query is the right trade on a surface whose writes become code
- * the runner executes.
+ * The role lookup itself lives in `getAdminUserId` so pages (which `notFound()`
+ * rather than throw) and route handlers share one implementation.
  */
 export async function requireAdmin(): Promise<string> {
-    const userId = await getSessionUserId();
+    const userId = await getAdminUserId();
     if (!userId) throw new HttpError(404, "Not found");
-
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true },
-    });
-    if (user?.role !== ADMIN_ROLE) throw new HttpError(404, "Not found");
     return userId;
 }
 

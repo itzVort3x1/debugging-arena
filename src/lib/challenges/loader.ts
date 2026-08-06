@@ -62,7 +62,8 @@ function extname(p: string): string {
   return dot > slash ? p.slice(dot).toLowerCase() : "";
 }
 
-function languageFromPath(filePath: string): string {
+/** The Monaco language id for a path, by extension. Exported for the editor. */
+export function languageFromPath(filePath: string): string {
   return EXT_TO_LANGUAGE[extname(filePath)] ?? "plaintext";
 }
 

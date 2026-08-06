@@ -3,12 +3,7 @@
 import { useArenaStore } from "@/store/arena";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { Badge } from "@/components/ui/Badge";
-
-const DIFFICULTY_TONE = {
-  easy: "success",
-  medium: "warning",
-  hard: "error",
-} as const;
+import { DifficultyBadge } from "@/components/ui/DifficultyBadge";
 
 export function ProblemPanel() {
   const challenge = useArenaStore((s) => s.challenge);
@@ -30,9 +25,7 @@ export function ProblemPanel() {
           {meta.title}
         </h2>
         <div className="mb-3 flex flex-wrap gap-1.5">
-          <Badge tone={DIFFICULTY_TONE[meta.difficulty]} size="sm">
-            {meta.difficulty}
-          </Badge>
+          <DifficultyBadge level={meta.difficulty} />
           {meta.stack.map((s) => (
             <Badge key={s} tone="info" size="sm">
               {s}

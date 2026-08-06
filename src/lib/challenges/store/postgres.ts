@@ -6,6 +6,7 @@ import {
 } from "../manifest";
 import type { ChallengeMeta, Runtime } from "../../../../challenges/_schema";
 import type { ChallengeEntry, ChallengeStore } from "./types";
+import { asTree, childrenOf, splitPath, type ChallengeTree } from "./tree";
 
 /**
  * A {@link ChallengeStore} backed by the `Challenge` table, where each row holds
@@ -86,24 +87,6 @@ export function prismaRowSource(): ChallengeRowSource {
   };
 }
 
-/** A challenge's file tree: root-relative forward-slash path -> file content. */
-export type ChallengeTree = Record<string, string>;
-
-/**
- * Coerce a jsonb `content` value into a tree, ignoring non-string entries so a
- * malformed row degrades to "file missing" rather than crashing the loader.
- */
-function asTree(content: unknown): ChallengeTree {
-  if (!content || typeof content !== "object" || Array.isArray(content)) {
-    return {};
-  }
-  const tree: ChallengeTree = {};
-  for (const [path, value] of Object.entries(content as Record<string, unknown>)) {
-    if (typeof value === "string") tree[path] = value;
-  }
-  return tree;
-}
-
 /**
  * The resolved `ChallengeMeta` for a row. Every field of the summary meta the
  * registry needs is a column, so this needs no parse of `meta.json`: `runtime`
@@ -124,30 +107,6 @@ function metaOf(row: ChallengeRow): ChallengeMeta {
     languages: row.languages as Runtime[],
     defaultLanguage: row.defaultLanguage as Runtime,
   };
-}
-
-/** Split a store path into its challenge slug and the root-relative remainder. */
-function splitPath(rel: string): { slug: string; rest: string } {
-  const [slug = "", ...tail] = rel.split("/").filter(Boolean);
-  return { slug, rest: tail.join("/") };
-}
-
-/**
- * The immediate children of `dir` within a tree, derived from the file paths.
- * Directories are implied by path prefixes — nothing stores them explicitly.
- */
-function childrenOf(tree: ChallengeTree, dir: string): ChallengeEntry[] {
-  const prefix = dir ? `${dir}/` : "";
-  const seen = new Map<string, boolean>(); // name -> isDir
-  for (const path of Object.keys(tree)) {
-    if (!path.startsWith(prefix)) continue;
-    const remainder = path.slice(prefix.length);
-    if (!remainder) continue;
-    const slash = remainder.indexOf("/");
-    if (slash === -1) seen.set(remainder, false);
-    else seen.set(remainder.slice(0, slash), true);
-  }
-  return Array.from(seen, ([name, isDir]) => ({ name, isDir }));
 }
 
 export class PostgresStore implements ChallengeStore {

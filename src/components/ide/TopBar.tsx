@@ -2,16 +2,10 @@
 
 import Link from "next/link";
 import { useArenaStore } from "@/store/arena";
-import { Badge } from "@/components/ui/Badge";
+import { DifficultyBadge } from "@/components/ui/DifficultyBadge";
 import { RunButton } from "./RunButton";
 import { RunFileButton } from "./RunFileButton";
 import { SubmitButton } from "./SubmitButton";
-
-const DIFFICULTY_TONE = {
-  easy: "success",
-  medium: "warning",
-  hard: "error",
-} as const;
 
 interface TopBarProps {
   /** Optional slot rendered to the left of the action buttons. */
@@ -36,9 +30,7 @@ export function TopBar({ leftExtra }: TopBarProps) {
             <span className="truncate text-sm font-medium text-vscode-fg">
               {challenge.meta.title}
             </span>
-            <Badge tone={DIFFICULTY_TONE[challenge.meta.difficulty]} size="sm">
-              {challenge.meta.difficulty}
-            </Badge>
+            <DifficultyBadge level={challenge.meta.difficulty} />
             {leftExtra}
           </>
         ) : null}
