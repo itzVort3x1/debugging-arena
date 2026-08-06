@@ -1,0 +1,14 @@
+-- Admin role on User (see POSTGRES_CHALLENGES_PLAN.md, PR B).
+--
+-- Gates the challenge-authoring admin surface. Challenges authored there
+-- include test files the runner executes, so this is a real privilege boundary,
+-- not a UI preference.
+--
+-- PURELY ADDITIVE and safe on live data: the NOT NULL default backfills every
+-- existing row to 'USER', so nobody gains access by virtue of the migration.
+-- The first admin has to be promoted deliberately:
+--   npx tsx --env-file=.env scripts/set-user-role.ts <email> ADMIN
+--
+-- A plain String rather than a Postgres enum, matching DebugSession.status and
+-- Challenge.status.
+ALTER TABLE "User" ADD COLUMN "role" TEXT NOT NULL DEFAULT 'USER';
