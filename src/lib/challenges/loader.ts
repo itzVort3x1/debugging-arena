@@ -74,6 +74,12 @@ function join(...segments: string[]): string {
 /**
  * Recursively collect file paths under `root`, relative to `root` (forward
  * slashes). A missing `root` yields `[]`.
+ *
+ * Sorted, because `list` order is not a stable property of any store: `readdir`
+ * is alphabetical on NTFS but hash-ordered on ext4, and Postgres `jsonb` sorts
+ * object keys by length then bytewise rather than preserving insertion order.
+ * Without this the `files`/`testFiles` arrays — and so the file explorer's
+ * ordering — would differ between dev, prod, and challenge sources.
  */
 async function walk(store: ChallengeStore, root: string): Promise<string[]> {
   const out: string[] = [];
@@ -87,7 +93,7 @@ async function walk(store: ChallengeStore, root: string): Promise<string[]> {
       else out.push(childRel);
     }
   }
-  return out;
+  return out.sort((a, b) => a.localeCompare(b));
 }
 
 /** Editable source files, read from `<variantRoot>/files`. */
