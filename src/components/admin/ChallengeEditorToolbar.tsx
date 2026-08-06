@@ -24,6 +24,8 @@ export interface ChallengeEditorToolbarProps {
   status: ChallengeStatus;
   dirty: boolean;
   busy: DraftBusy;
+  historyOpen: boolean;
+  onToggleHistory: () => void;
   onValidate: () => void;
   onSave: (status: ChallengeStatus) => void;
 }
@@ -35,6 +37,8 @@ export function ChallengeEditorToolbar({
   status,
   dirty,
   busy,
+  historyOpen,
+  onToggleHistory,
   onValidate,
   onSave,
 }: ChallengeEditorToolbarProps) {
@@ -59,6 +63,15 @@ export function ChallengeEditorToolbar({
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onToggleHistory}
+          aria-pressed={historyOpen}
+          title="Published version history"
+        >
+          History
+        </Button>
         <Button
           size="sm"
           variant="ghost"
