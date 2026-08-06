@@ -12,12 +12,20 @@ export default async function AdminChallengesPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8">
-      <div className="mb-6">
-        <h1 className="text-lg font-semibold">Challenges</h1>
-        <p className="mt-1 text-xs text-vscode-fg-muted">
-          Published challenges are live in the arena. Drafts are visible only
-          here.
-        </p>
+      <div className="mb-6 flex items-start gap-4">
+        <div>
+          <h1 className="text-lg font-semibold">Challenges</h1>
+          <p className="mt-1 text-xs text-vscode-fg-muted">
+            Published challenges are live in the arena. Drafts are visible only
+            here.
+          </p>
+        </div>
+        <Link
+          href="/admin/challenges/new"
+          className="ml-auto shrink-0 rounded-md bg-vscode-accent px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-vscode-accent-hover"
+        >
+          New challenge
+        </Link>
       </div>
 
       {challenges.length === 0 ? (
