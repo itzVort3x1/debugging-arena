@@ -7,6 +7,7 @@ import {
     assertOwned,
     parseJsonBody,
     requireChallenge,
+    requireChallengeVariants,
     requireUserId,
 } from "@/lib/api/guards";
 import { loadSharedReveals, serializeSession } from "@/lib/sessions";
@@ -86,5 +87,21 @@ export const POST = route<RouteContext>(async (req, { params }) => {
         data: { hintsUsed: shared.revealedHintLevels.length },
     });
 
-    return NextResponse.json(serializeSession(updated, shared));
+    // The body is no longer in the page payload, so the reveal has to deliver
+    // it. Every language, not just this session's: the reveal is shared across
+    // them, and the switcher swaps variants client-side without a round-trip.
+    const variants = await requireChallengeVariants(
+        session.challengeSlug,
+        session.challengeVersion,
+    );
+    const contentByLanguage: Record<string, string> = {};
+    for (const [language, definition] of Object.entries(variants)) {
+        const hint = definition?.hints.find((h) => h.level === level);
+        if (hint) contentByLanguage[language] = hint.content;
+    }
+
+    return NextResponse.json({
+        ...serializeSession(updated, shared),
+        hint: { level, contentByLanguage },
+    });
 });

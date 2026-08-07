@@ -7,6 +7,8 @@ import {
   getChallengeVariants,
 } from "@/lib/challenges/registry";
 import { getPinnedChallengeVariants } from "@/lib/challenges/pinned";
+import { toClientVariants } from "@/lib/challenges/client-view";
+import { loadSharedReveals } from "@/lib/sessions";
 import { prisma } from "@/lib/prisma";
 import type { Runtime } from "../../../../../challenges/_schema";
 import { ArenaPageClient } from "./ArenaPageClient";
@@ -74,9 +76,16 @@ export default async function ArenaPage({
       ? requested
       : challenge.defaultLanguage;
 
+  // Strip hint bodies and the solution down to what this user has actually
+  // revealed. Reveals are shared per (user, challenge) across languages and
+  // sessions, so the same state applies to every variant — and passing it here
+  // is what lets a reload restore hints the user already paid for, since the
+  // content is no longer in the payload by default.
+  const reveals = await loadSharedReveals(session.user.id, params.slug);
+
   return (
     <ArenaPageClient
-      variants={challenge.variants}
+      variants={toClientVariants(challenge.variants, reveals)}
       initialLanguage={initialLanguage}
     />
   );

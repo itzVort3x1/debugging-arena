@@ -4,6 +4,23 @@ export type SessionStatus =
     | "COMPLETED"
     | "ABANDONED";
 
+/**
+ * POST /api/sessions/[id]/hints. Carries the hint body, which the page payload
+ * withholds until the level is revealed — keyed by language because a reveal is
+ * shared across every variant of the challenge.
+ */
+export interface RevealHintResponse extends DebugSessionResponse {
+    hint?: {
+        level: number;
+        contentByLanguage: Record<string, string>;
+    };
+}
+
+/** POST /api/sessions/[id]/solution. As above, for the worked solution. */
+export interface RevealSolutionResponse extends DebugSessionResponse {
+    solutionByLanguage?: Record<string, string>;
+}
+
 export interface DebugSessionResponse {
     id: string;
     userId: string;

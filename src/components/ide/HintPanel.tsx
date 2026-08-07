@@ -10,7 +10,10 @@ import { PanelHeader } from "@/components/ui/PanelHeader";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { LockOutlineIcon } from "@/components/ui/icons";
 import { apiFetch } from "@/lib/api-client";
-import type { DebugSessionResponse } from "@/types/session";
+import type {
+    RevealHintResponse,
+    RevealSolutionResponse,
+} from "@/types/session";
 
 /**
  * Reveals progressive hints with score penalties, plus a final full
@@ -19,11 +22,18 @@ import type { DebugSessionResponse } from "@/types/session";
  * `session.revealedHintLevels` and `session.solutionRevealed` (persisted via
  * the /hints and /solution endpoints), so they survive reloads and feed
  * scoring at submit time.
+ *
+ * The bodies are server-authoritative too. A hint's `content` and the solution
+ * text are absent from the page payload until revealed, so this panel renders
+ * what the reveal endpoints hand back (folded into the store) rather than
+ * unhiding something it was already holding.
  */
 export function HintPanel() {
     const challenge = useArenaStore((s) => s.challenge);
     const session = useArenaStore((s) => s.session);
     const mergeSessionMeta = useArenaStore((s) => s.mergeSessionMeta);
+    const applyRevealedHint = useArenaStore((s) => s.applyRevealedHint);
+    const applyRevealedSolution = useArenaStore((s) => s.applyRevealedSolution);
 
     const [pendingLevel, setPendingLevel] = useState<number | null>(null);
     const [pendingSolution, setPendingSolution] = useState(false);
@@ -53,11 +63,17 @@ export function HintPanel() {
         setPendingLevel(level);
         setError(null);
         try {
-            const updated = await apiFetch<DebugSessionResponse>(
+            const updated = await apiFetch<RevealHintResponse>(
                 `/api/sessions/${session.id}/hints`,
                 { method: "POST", json: { level }, fallbackError: "Failed" },
             );
             mergeSessionMeta(updated);
+            if (updated.hint) {
+                applyRevealedHint(
+                    updated.hint.level,
+                    updated.hint.contentByLanguage,
+                );
+            }
         } catch (err) {
             setError(
                 err instanceof Error ? err.message : "Failed to reveal hint",
@@ -72,11 +88,14 @@ export function HintPanel() {
         setPendingSolution(true);
         setError(null);
         try {
-            const updated = await apiFetch<DebugSessionResponse>(
+            const updated = await apiFetch<RevealSolutionResponse>(
                 `/api/sessions/${session.id}/solution`,
                 { method: "POST", fallbackError: "Failed" },
             );
             mergeSessionMeta(updated);
+            if (updated.solutionByLanguage) {
+                applyRevealedSolution(updated.solutionByLanguage);
+            }
         } catch (err) {
             setError(
                 err instanceof Error
@@ -133,7 +152,7 @@ export function HintPanel() {
                                         −{h.penaltyPoints} pts
                                     </Badge>
                                 </div>
-                                {isRevealed ? (
+                                {isRevealed && h.content ? (
                                     <MarkdownRenderer content={h.content} />
                                 ) : (
                                     <Button
@@ -151,7 +170,7 @@ export function HintPanel() {
                     })
                 )}
 
-                {challenge.solution ? (
+                {challenge.hasSolution ? (
                     <SolutionCard
                         solution={challenge.solution}
                         revealed={solutionRevealed}
@@ -167,7 +186,8 @@ export function HintPanel() {
 }
 
 interface SolutionCardProps {
-    solution: string;
+    /** Absent until the reveal endpoint releases it. */
+    solution?: string;
     revealed: boolean;
     unlocked: boolean;
     pending: boolean;
@@ -199,7 +219,7 @@ function SolutionCard({
                 </Badge>
             </div>
 
-            {revealed ? (
+            {revealed && solution ? (
                 <MarkdownRenderer content={solution} />
             ) : unlocked ? (
                 <div className="space-y-2">

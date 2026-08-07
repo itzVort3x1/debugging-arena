@@ -5,6 +5,7 @@ import {
     assertEditable,
     assertOwned,
     requireChallenge,
+    requireChallengeVariants,
     requireUserId,
 } from "@/lib/api/guards";
 import { loadSharedReveals, serializeSession } from "@/lib/sessions";
@@ -54,9 +55,27 @@ export const POST = route<RouteContext>(async (_req, { params }) => {
 
     const shared = await loadSharedReveals(userId, session.challengeSlug);
 
+    // The solution text is no longer in the page payload, so this route is the
+    // only way to obtain it. Every language, since the reveal is shared across
+    // them and the switcher swaps variants without a round-trip.
+    const solutionByLanguage = async () => {
+        const variants = await requireChallengeVariants(
+            session.challengeSlug,
+            session.challengeVersion,
+        );
+        const out: Record<string, string> = {};
+        for (const [language, definition] of Object.entries(variants)) {
+            if (definition?.solution) out[language] = definition.solution;
+        }
+        return out;
+    };
+
     // Already revealed - return current state without re-checking the gate.
     if (shared.solutionRevealed) {
-        return NextResponse.json(serializeSession(session, shared));
+        return NextResponse.json({
+            ...serializeSession(session, shared),
+            solutionByLanguage: await solutionByLanguage(),
+        });
     }
 
     // Gate: every hint level must be revealed first (shared reveal state).
@@ -84,7 +103,8 @@ export const POST = route<RouteContext>(async (_req, { params }) => {
         update: { solutionRevealed: true },
     });
 
-    return NextResponse.json(
-        serializeSession(session, { ...shared, solutionRevealed: true }),
-    );
+    return NextResponse.json({
+        ...serializeSession(session, { ...shared, solutionRevealed: true }),
+        solutionByLanguage: await solutionByLanguage(),
+    });
 });
