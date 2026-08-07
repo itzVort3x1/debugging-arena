@@ -6,6 +6,8 @@ import {
   getChallengeMeta,
   getChallengeVariants,
 } from "@/lib/challenges/registry";
+import { getPinnedChallengeVariants } from "@/lib/challenges/pinned";
+import { prisma } from "@/lib/prisma";
 import type { Runtime } from "../../../../../challenges/_schema";
 import { ArenaPageClient } from "./ArenaPageClient";
 
@@ -35,7 +37,33 @@ export default async function ArenaPage({
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
 
-  const challenge = await getChallengeVariants(params.slug);
+  // Serve the pinned snapshot when an attempt is already underway, so the
+  // description, hints and read-only test files the page renders match what the
+  // session's run/submit routes execute against. Without this the server would
+  // hold the line on content while the page around it silently moved.
+  //
+  // The pin is challenge-wide rather than per-language, so any in-progress
+  // session for this challenge identifies it. On a first visit there is no
+  // session yet and live content is correct — the session created moments later
+  // pins whatever it was served.
+  const inProgress = await prisma.debugSession.findFirst({
+    where: {
+      userId: session.user.id,
+      challengeSlug: params.slug,
+      status: "IN_PROGRESS",
+      challengeVersion: { not: null },
+    },
+    orderBy: { startedAt: "desc" },
+    select: { challengeVersion: true },
+  });
+
+  const challenge =
+    inProgress?.challengeVersion != null
+      ? ((await getPinnedChallengeVariants(
+          params.slug,
+          inProgress.challengeVersion,
+        )) ?? (await getChallengeVariants(params.slug)))
+      : await getChallengeVariants(params.slug);
   if (!challenge) notFound();
 
   // Resolve the starting language: an explicit `?language=` (used by dashboard

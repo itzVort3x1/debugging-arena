@@ -56,6 +56,7 @@ export const POST = route<RouteContext>(async (req, { params }) => {
     const challenge = await requireChallenge(
         session.challengeSlug,
         session.language,
+        session.challengeVersion,
     );
     // Reveal penalties are shared per (user, challenge), across languages.
     const shared = await loadSharedReveals(userId, session.challengeSlug);

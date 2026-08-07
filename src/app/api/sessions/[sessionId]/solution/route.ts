@@ -43,6 +43,7 @@ export const POST = route<RouteContext>(async (_req, { params }) => {
     const challenge = await requireChallenge(
         session.challengeSlug,
         session.language,
+        session.challengeVersion,
     );
     if (!challenge.solution) {
         throw new HttpError(

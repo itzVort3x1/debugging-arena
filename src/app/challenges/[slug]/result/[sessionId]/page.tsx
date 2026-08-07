@@ -4,7 +4,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getChallenge, getChallengeMeta } from "@/lib/challenges/registry";
+import { getPinnedChallenge } from "@/lib/challenges/pinned";
 import { loadSharedReveals, serializeSession } from "@/lib/sessions";
+import type { Runtime } from "../../../../../../challenges/_schema";
 import { computeScore } from "@/lib/scoring";
 import { ResultView } from "./ResultView";
 
@@ -45,7 +47,19 @@ export default async function ResultPage({ params }: ResultPageProps) {
     if (!row || row.userId !== auth.user.id) notFound();
     if (row.challengeSlug !== params.slug) notFound();
 
-    const challenge = await getChallenge(row.challengeSlug);
+    // The pinned snapshot, so the result page explains the attempt against the
+    // content it was actually scored on. This matters more here than elsewhere:
+    // the breakdown below is recomputed from the challenge, so resolving live
+    // content would let a later edit change the explanation of an already
+    // persisted score.
+    const challenge =
+        row.challengeVersion != null
+            ? ((await getPinnedChallenge(
+                  row.challengeSlug,
+                  row.challengeVersion,
+                  row.language as Runtime,
+              )) ?? (await getChallenge(row.challengeSlug)))
+            : await getChallenge(row.challengeSlug);
     if (!challenge) notFound();
 
     if (row.status !== "SUBMITTED") {
