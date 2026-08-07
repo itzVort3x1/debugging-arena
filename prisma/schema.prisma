@@ -101,11 +101,15 @@ model DebugSession {
   lastRunAt     DateTime?
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge    Challenge     @relation(fields: [challengeSlug], references: [slug], onDelete: Restrict)
   testRuns     TestRun[]
   hintRequests HintRequest[]
   postmortem   Postmortem?
 
   @@index([userId, challengeSlug, language])
+  // challengeSlug is not the leading column of the composite index above, so it
+  // cannot serve the FK's child lookup on its own.
+  @@index([challengeSlug])
 }
 
 // SessionStatus values: IN_PROGRESS | SUBMITTED | COMPLETED | ABANDONED
@@ -136,12 +140,14 @@ model HintRequest {
   level         Int
   requestedAt   DateTime @default(now())
 
-  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  session DebugSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session   DebugSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  challenge Challenge     @relation(fields: [challengeSlug], references: [slug], onDelete: Restrict)
 
   // A given hint level can only be revealed once per user+challenge, shared
   // across languages and sessions.
   @@unique([userId, challengeSlug, level])
+  @@index([challengeSlug])
 }
 
 // Shared per-(user, challenge) progress that is independent of language and
@@ -156,9 +162,11 @@ model UserChallengeProgress {
   solutionRevealed Boolean  @default(false)
   updatedAt        DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeSlug], references: [slug], onDelete: Restrict)
 
   @@unique([userId, challengeSlug])
+  @@index([challengeSlug])
 }
 
 model Postmortem {
@@ -209,6 +217,18 @@ model Challenge {
   publishedAt DateTime?
 
   versions ChallengeVersion[]
+
+  // User-facing history, deliberately Restrict rather than Cascade (versions
+  // above cascade because they are owned by the challenge; these are not).
+  // Sessions, hint reveals and progress rows are a user's record of what they
+  // did, including stamped scores. Deleting a challenge should not silently
+  // erase them — and since nothing in the app deletes a Challenge (the admin UI
+  // unpublishes by setting status, and there is no DELETE route), the only way
+  // to hit this is a manual database operation, which is exactly when a refusal
+  // beats a silent cascade.
+  sessions     DebugSession[]
+  hintRequests HintRequest[]
+  progress     UserChallengeProgress[]
 
   @@index([status])
 }
