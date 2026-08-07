@@ -72,7 +72,7 @@ async function main() {
 
   let pgStore: PostgresStore;
   if (offline) {
-    pgStore = new PostgresStore(memoryRowSource(await buildAllRows(fsStore)));
+    pgStore = new PostgresStore(memoryRowSource(await buildAllRows()));
   } else {
     pgStore = new PostgresStore();
   }

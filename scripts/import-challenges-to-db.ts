@@ -17,6 +17,23 @@
  */
 import { prisma } from "../src/lib/prisma";
 import { buildAllRows } from "./challenge-rows";
+import { asTree, type ChallengeTree } from "../src/lib/challenges/store/tree";
+
+/**
+ * Serialize a tree with its keys sorted, for comparison only.
+ *
+ * The comparison has to be order-insensitive because `jsonb` does not preserve
+ * key order — it stores keys sorted by length, then bytewise — while a tree
+ * read off disk arrives in readdir order. Comparing the two serializations
+ * directly therefore reports "changed" on every run even when nothing has,
+ * bumping the version and recording a duplicate snapshot each time. The values
+ * are compared as themselves; only the key order is normalized.
+ */
+function canonical(tree: ChallengeTree): string {
+  const sorted: ChallengeTree = {};
+  for (const key of Object.keys(tree).sort()) sorted[key] = tree[key];
+  return JSON.stringify(sorted);
+}
 
 async function main() {
   const rows = await buildAllRows();
@@ -37,10 +54,7 @@ async function main() {
 
       // Skip a re-import that would change nothing, so versions only advance on
       // real edits.
-      if (
-        existing &&
-        JSON.stringify(existing.content) === JSON.stringify(tree)
-      ) {
+      if (existing && canonical(asTree(existing.content)) === canonical(tree)) {
         return "unchanged" as const;
       }
 
