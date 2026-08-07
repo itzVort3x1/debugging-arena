@@ -12,6 +12,8 @@ import { childrenOf, splitPath, type ChallengeTree } from "./tree";
  * their directory structure from the same helpers in `./tree`.
  */
 export class MemoryStore implements ChallengeStore {
+  readonly kind = "memory" as const;
+
   /** slug -> that challenge's file tree. */
   private readonly challenges: Record<string, ChallengeTree>;
 

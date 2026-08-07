@@ -9,6 +9,8 @@ import type { ChallengeEntry, ChallengeStore } from "./types";
  * path separator here.
  */
 export class FilesystemStore implements ChallengeStore {
+  readonly kind = "filesystem" as const;
+
   /** Absolute path of the challenges root the store paths are relative to. */
   private readonly root: string;
 
