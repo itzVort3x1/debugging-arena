@@ -2,7 +2,7 @@
  * Storage seam for challenge content. The loader reads every challenge file
  * through this async interface instead of touching `fs` directly, so the same
  * loader logic works over the local filesystem (dev/test) or a remote store
- * (Supabase Storage in prod) — selected by {@link selectChallengeStore}.
+ * (Postgres) — selected by {@link selectChallengeStore}.
  *
  * Deliberately minimal and language-neutral: just "read this text file" and
  * "list this directory". All paths are store-relative and use forward slashes
@@ -19,11 +19,7 @@ export interface ChallengeEntry {
 }
 
 /** Which backend a {@link ChallengeStore} instance is. */
-export type ChallengeStoreKind =
-  | "filesystem"
-  | "postgres"
-  | "supabase"
-  | "memory";
+export type ChallengeStoreKind = "filesystem" | "postgres" | "memory";
 
 export interface ChallengeStore {
   /**
@@ -54,8 +50,8 @@ export interface ChallengeStore {
 
   /**
    * Drop anything the store itself has cached, so the next read hits the
-   * underlying source. Optional: stores that hold no state (filesystem,
-   * Supabase Storage) omit it.
+   * underlying source. Optional: stores that hold no state (filesystem)
+   * omit it.
    *
    * The store is a process-wide singleton, so a store that memoizes rows would
    * otherwise keep serving stale content after

@@ -2,8 +2,9 @@
  * Generate the challenge manifest (`challenges/index.json`) from the local
  * `challenges/` tree. The manifest lets the registry warm its meta tier from a
  * single read instead of listing + reading every meta.json — the win is on a
- * remote store, but generating it locally lets us exercise that path and gives
- * the Supabase seed (a later PR) the same builder.
+ * remote store, but generating it locally lets us exercise that path. The same
+ * builder backs `verify-postgres-parity.ts`, which compares this manifest
+ * against the one PostgresStore synthesizes.
  *
  * Run from the repo root:
  *   npx tsx scripts/build-manifest.ts
