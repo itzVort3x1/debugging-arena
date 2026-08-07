@@ -1,10 +1,15 @@
 import type { z } from "zod";
 import type { ChallengeDefinition, Runtime } from "../../../challenges/_schema";
 import { getAdminUserId, getSessionUserId } from "@/lib/auth-helpers";
-import { getChallenge, getChallengeLanguages } from "@/lib/challenges/registry";
+import {
+    getChallenge,
+    getChallengeLanguages,
+    getChallengeVariants,
+} from "@/lib/challenges/registry";
 import {
     getPinnedChallenge,
     getPinnedChallengeLanguages,
+    getPinnedChallengeVariants,
 } from "@/lib/challenges/pinned";
 import { HttpError } from "./http";
 
@@ -91,6 +96,29 @@ export function assertEditable<T extends { status: string }>(
         throw new HttpError(409, message);
     }
     return session;
+}
+
+/**
+ * Every language variant of the content a stored session should be served,
+ * honouring its pin the same way {@link requireChallenge} does.
+ *
+ * Needed by the reveal routes. A reveal is shared per (user, challenge) across
+ * languages, so revealing level 2 in Node has to hand back level 2 in Python
+ * as well — otherwise switching language after a reveal would show a hint the
+ * user owns with nothing in it until they reloaded.
+ */
+export async function requireChallengeVariants(
+    slug: string,
+    pinnedVersion?: number | null,
+): Promise<Partial<Record<Runtime, ChallengeDefinition>>> {
+    const resolved =
+        pinnedVersion == null
+            ? await getChallengeVariants(slug)
+            : await getPinnedChallengeVariants(slug, pinnedVersion);
+    if (!resolved) {
+        throw new HttpError(500, "Challenge no longer registered");
+    }
+    return resolved.variants;
 }
 
 /**

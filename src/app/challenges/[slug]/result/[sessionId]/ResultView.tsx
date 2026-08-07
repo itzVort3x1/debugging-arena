@@ -1,11 +1,11 @@
 import Link from "next/link";
-import type { ChallengeDefinition } from "../../../../../../challenges/_schema";
+import type { ClientChallengeDefinition } from "../../../../../../challenges/_schema";
 import type { DebugSessionResponse } from "@/types/session";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { formatDuration } from "@/lib/format";
 
 interface ResultViewProps {
-    challenge: ChallengeDefinition;
+    challenge: ClientChallengeDefinition;
     session: DebugSessionResponse;
     breakdown: ScoreBreakdown;
 }

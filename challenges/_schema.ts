@@ -80,3 +80,37 @@ export interface ChallengeDefinition {
      */
     solution?: string;
 }
+
+/**
+ * A hint as the browser is allowed to see it. `content` is present only once
+ * the user has revealed that level and paid its penalty.
+ */
+export interface ClientHint {
+    level: HintLevelNumber;
+    title: string;
+    penaltyPoints: number;
+    /** The hint body. Absent until this level is revealed. */
+    content?: string;
+}
+
+/**
+ * A challenge as sent to the browser.
+ *
+ * The full {@link ChallengeDefinition} is server-only: it carries every hint
+ * body and the worked solution, which are the things the scoring model charges
+ * for. Serializing it into a client component would put all of them in the page
+ * payload, readable before revealing anything — the penalties would apply only
+ * to users who did not open devtools.
+ *
+ * So the withheld fields are not merely hidden from the UI, they are absent
+ * from the response. `hasSolution` exists because the UI still has to know
+ * whether there is a solution to offer, which is not the same as knowing it.
+ */
+export interface ClientChallengeDefinition
+    extends Omit<ChallengeDefinition, "hints" | "solution"> {
+    hints: ClientHint[];
+    /** Whether a worked solution exists at all; its text is withheld. */
+    hasSolution: boolean;
+    /** The worked solution. Absent until revealed. */
+    solution?: string;
+}

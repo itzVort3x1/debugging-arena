@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getChallenge } from "@/lib/challenges/registry";
+import { toClientChallenge } from "@/lib/challenges/client-view";
 
 export const dynamic = "force-dynamic";
 
@@ -16,19 +17,10 @@ export async function GET(
     );
   }
 
-  // Hints are revealed progressively via the session API. Surface the
-  // title + cost so the UI can render the locked tile, but withhold content.
-  const hints = challenge.hints.map((h) => ({
-    level: h.level,
-    title: h.title,
-    penaltyPoints: h.penaltyPoints,
-  }));
-
-  return NextResponse.json({
-    meta: challenge.meta,
-    description: challenge.description,
-    files: challenge.files,
-    testFiles: challenge.testFiles,
-    hints,
-  });
+  // Hints are revealed progressively via the session API, and the solution
+  // only after all of them. This route has no session, so nothing is revealed:
+  // `toClientChallenge` with the default reveal state withholds every hint body
+  // and the solution. It used to strip the same fields by hand here, which left
+  // two places that had to agree on what is safe to send.
+  return NextResponse.json(toClientChallenge(challenge));
 }

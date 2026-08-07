@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getChallenge, getChallengeMeta } from "@/lib/challenges/registry";
 import { getPinnedChallenge } from "@/lib/challenges/pinned";
+import { toClientChallenge } from "@/lib/challenges/client-view";
 import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 import type { Runtime } from "../../../../../../challenges/_schema";
 import { computeScore } from "@/lib/scoring";
@@ -78,9 +79,13 @@ export default async function ResultPage({ params }: ResultPageProps) {
         solutionRevealed: session.solutionRevealed,
     });
 
+    // `breakdown` above is computed from the full definition server-side; the
+    // client only ever needs meta here, so it gets the stripped view. Without
+    // this the result page would hand over the solution for a challenge the
+    // user may still have an unsubmitted session on in another language.
     return (
         <ResultView
-            challenge={challenge}
+            challenge={toClientChallenge(challenge, shared)}
             session={session}
             breakdown={breakdown}
         />

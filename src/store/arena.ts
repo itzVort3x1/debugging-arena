@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { ChallengeDefinition, Runtime } from "../../challenges/_schema";
+import type {
+    ClientChallengeDefinition,
+    Runtime,
+} from "../../challenges/_schema";
 import type { DebugSessionResponse } from "@/types/session";
 
 /**
@@ -9,7 +12,7 @@ import type { DebugSessionResponse } from "@/types/session";
  * path. Shared by initial session seeding and language switching.
  */
 function pickDefaultTab(
-    challenge: ChallengeDefinition | null,
+    challenge: ClientChallengeDefinition | null,
     fileState: Record<string, string>,
 ): string | null {
     const editablePaths =
@@ -26,7 +29,7 @@ function pickDefaultTab(
 /** Seed live editor contents from a session, backfilling any files the
  * session's frozen fileState is missing from the challenge's starting set. */
 function seedFileContents(
-    challenge: ChallengeDefinition | null,
+    challenge: ClientChallengeDefinition | null,
     session: DebugSessionResponse,
 ): Record<string, string> {
     const seeded: Record<string, string> = { ...session.fileState };
@@ -42,14 +45,14 @@ export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export interface ArenaState {
     /** Hydrated challenge spec - files, tests, description, hints. */
-    challenge: ChallengeDefinition | null;
+    challenge: ClientChallengeDefinition | null;
     /**
      * All language variants of the current challenge, keyed by runtime. Set
      * once on hydration so the language switcher can swap variants without a
      * round-trip for the challenge definition. A single-language challenge has
      * one entry (and no switcher is shown).
      */
-    variants: Partial<Record<Runtime, ChallengeDefinition>> | null;
+    variants: Partial<Record<Runtime, ClientChallengeDefinition>> | null;
     /** Server-issued DebugSession. Null until the session resolves. */
     session: DebugSessionResponse | null;
 
@@ -77,9 +80,9 @@ export interface ArenaState {
     terminalLines: string[];
 
     // Actions
-    setChallenge: (challenge: ChallengeDefinition) => void;
+    setChallenge: (challenge: ClientChallengeDefinition) => void;
     setVariants: (
-        variants: Partial<Record<Runtime, ChallengeDefinition>>,
+        variants: Partial<Record<Runtime, ClientChallengeDefinition>>,
     ) => void;
     setSession: (session: DebugSessionResponse) => void;
     /**
@@ -88,7 +91,7 @@ export interface ArenaState {
      * cleared terminal, reset save state) so no state leaks across languages.
      */
     loadVariant: (
-        challenge: ChallengeDefinition,
+        challenge: ClientChallengeDefinition,
         session: DebugSessionResponse,
     ) => void;
     setFileContent: (path: string, content: string) => void;
@@ -110,6 +113,21 @@ export interface ArenaState {
      * unsaved buffer.
      */
     mergeSessionMeta: (next: DebugSessionResponse) => void;
+    /**
+     * Store hint content the server released on reveal.
+     *
+     * Hint bodies are withheld from the page payload, so this is how a hint
+     * revealed during this page's life gets something to render. Keyed by
+     * language because the reveal is shared across variants and the switcher
+     * swaps them without a round-trip — folding in every language now is what
+     * keeps a later switch from showing an owned hint as empty.
+     */
+    applyRevealedHint: (
+        level: number,
+        contentByLanguage: Record<string, string>,
+    ) => void;
+    /** As {@link applyRevealedHint}, for the worked solution. */
+    applyRevealedSolution: (solutionByLanguage: Record<string, string>) => void;
     reset: () => void;
 }
 
@@ -277,6 +295,44 @@ export const useArenaStore = create<ArenaState>()(
                 // Preserve the existing in-memory fileState (user edits in flight)
                 // and overwrite everything else.
                 state.session = { ...next, fileState: state.session.fileState };
+            }),
+
+        applyRevealedHint: (level, contentByLanguage) =>
+            set((state) => {
+                // The active challenge and the variant map hold separate copies
+                // under immer, so both are updated; rendering reads the former.
+                for (const [language, content] of Object.entries(
+                    contentByLanguage,
+                )) {
+                    const variant = state.variants?.[language as Runtime];
+                    const hint = variant?.hints.find((h) => h.level === level);
+                    if (hint) hint.content = content;
+                }
+                const active = state.challenge?.hints.find(
+                    (h) => h.level === level,
+                );
+                const activeLanguage = state.session?.language;
+                if (active && activeLanguage && contentByLanguage[activeLanguage]) {
+                    active.content = contentByLanguage[activeLanguage];
+                }
+            }),
+
+        applyRevealedSolution: (solutionByLanguage) =>
+            set((state) => {
+                for (const [language, solution] of Object.entries(
+                    solutionByLanguage,
+                )) {
+                    const variant = state.variants?.[language as Runtime];
+                    if (variant) variant.solution = solution;
+                }
+                const activeLanguage = state.session?.language;
+                if (
+                    state.challenge &&
+                    activeLanguage &&
+                    solutionByLanguage[activeLanguage]
+                ) {
+                    state.challenge.solution = solutionByLanguage[activeLanguage];
+                }
             }),
 
         reset: () =>

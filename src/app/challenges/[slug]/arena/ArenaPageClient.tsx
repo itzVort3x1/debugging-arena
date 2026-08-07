@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import type {
-    ChallengeDefinition,
+    ClientChallengeDefinition,
     Runtime,
 } from "../../../../../challenges/_schema";
 import { useArenaStore } from "@/store/arena";
@@ -14,8 +14,12 @@ import { Button } from "@/components/ui/Button";
 import { CenteredScreen } from "@/components/ui/CenteredScreen";
 
 interface ArenaPageClientProps {
-    /** Every language variant of the challenge, keyed by runtime. */
-    variants: Partial<Record<Runtime, ChallengeDefinition>>;
+    /**
+     * Every language variant of the challenge, keyed by runtime. Client-safe:
+     * hint bodies and the solution are withheld until revealed (see
+     * `toClientChallenge`).
+     */
+    variants: Partial<Record<Runtime, ClientChallengeDefinition>>;
     /** Language the workspace opens in (validated server-side). */
     initialLanguage: Runtime;
 }
