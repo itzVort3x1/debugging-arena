@@ -58,7 +58,9 @@ export function ChallengeEditorToolbar({
           ) : null}
         </div>
         <div className="text-[11px] text-vscode-fg-subtle">
-          {slug} · v{version}
+          {/* Version 0 means nothing has been published yet, and "v0" would
+              read as a real version rather than the absence of one. */}
+          {slug} · {version > 0 ? `v${version}` : "not published yet"}
         </div>
       </div>
 
