@@ -40,9 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Generated challenge manifest (a build artifact; regenerate with scripts/build-manifest.ts)
-challenges/index.json
-
 # Default output of scripts/export-challenges-from-db.ts. Ignored so a routine
 # backup run never dirties the tree; commit a snapshot deliberately if you want
 # one in history.

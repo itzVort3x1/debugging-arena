@@ -13,25 +13,20 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/admin/challenges/source
  *
- * Which challenge store this instance is actually serving from. Answers the
- * only question that gates retiring `challenges/` from git — "is prod on
- * postgres yet?" — which was previously answerable only by reading the env of
- * the running process on the host.
+ * Health of the challenge store this instance reads through.
  *
- * It reports three things that are easy to conflate:
+ * It was written to answer "is prod on postgres yet?", the question that gated
+ * dropping `challenges/` from git. That question is now settled — Postgres is
+ * the only store — so the env-var reporting is gone. What remains is the part
+ * that stays useful with one backend: whether the store can actually be read,
+ * what it holds, and how warm the registry cache is.
  *
- *   - `configured` — the raw `ARENA_CHALLENGE_SOURCE`, or null when unset.
- *   - `store.kind` — the store that was actually constructed. Under normal
- *     operation this agrees with `configured`; it is reported separately
- *     because the singleton is built once per process, so an instance started
- *     before an env change keeps serving the old store until it restarts.
- *     That stale-process case is exactly the one a deploy check needs to catch,
- *     and comparing the env var to itself would never surface it.
- *   - `reachable` — whether the store can actually be read right now. A store
- *     that is configured and constructed can still fail on the first query
- *     (wrong DATABASE_URL, empty table), and that failure is a diagnostic
- *     result, not a server error — so it is reported as `reachable: false`
- *     with the message, at 200, rather than thrown as a 500.
+ *   - `reachable` — whether the store answers right now. A constructed store
+ *     can still fail on its first query (wrong DATABASE_URL, unmigrated
+ *     database, empty table), and that failure is a diagnostic result rather
+ *     than a server error — reported at 200 with the message, not thrown as
+ *     a 500, so the probe is most informative exactly when things are broken.
+ *   - `cache` — snapshotted before the read below, which warms it.
  *
  * Admin-only, so non-admins get a 404 and the admin surface stays invisible.
  */
@@ -48,10 +43,6 @@ export const GET = route(async () => {
   let slugs: string[] = [];
 
   try {
-    // Inside the try on purpose. An unrecognized ARENA_CHALLENGE_SOURCE makes
-    // this throw, and that is precisely the misconfiguration the probe exists
-    // to name — letting it 500 would make the endpoint fail hardest in the case
-    // it was written for.
     kind = selectChallengeStore().kind;
     slugs = (await getAllChallengeMeta()).map((m) => m.slug).sort();
     reachable = true;
@@ -60,7 +51,6 @@ export const GET = route(async () => {
   }
 
   return NextResponse.json({
-    configured: process.env.ARENA_CHALLENGE_SOURCE ?? null,
     store: { kind },
     reachable,
     error,

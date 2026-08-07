@@ -10,8 +10,8 @@ import { asTree, childrenOf, splitPath, type ChallengeTree } from "./tree";
 
 /**
  * A {@link ChallengeStore} backed by the `Challenge` table, where each row holds
- * a challenge's raw file tree as jsonb. Postgres is the source of truth once
- * `ARENA_CHALLENGE_SOURCE=postgres` (see POSTGRES_CHALLENGES_PLAN.md).
+ * a challenge's raw file tree as jsonb — the source of truth for challenge
+ * content (see POSTGRES_CHALLENGES_PLAN.md).
  *
  * The tree is stored raw — `{ "meta.json": "…", "files/src/x.ts": "…" }`, paths
  * relative to the challenge root — rather than as a parsed ChallengeDefinition,

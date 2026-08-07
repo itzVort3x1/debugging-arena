@@ -1,20 +1,26 @@
 /**
- * Import the local `challenges/` tree into the `Challenge` table — the one-time
- * migration from repo-as-source-of-truth to Postgres (see
- * POSTGRES_CHALLENGES_PLAN.md), and the way to re-sync while `challenges/` is
- * still in git.
+ * Load a challenge file tree into the `Challenge` table.
  *
- * Run from the repo root with the database env set:
- *   npx tsx --env-file=.env scripts/import-challenges-to-db.ts
+ * This began as the one-time migration off repo-as-source-of-truth. Now that
+ * `challenges/` has left git, it is the restore half of a pair:
+ * `export-challenges-from-db.ts` writes the database out as a tree, and this
+ * reads one back in. Together they are what makes the database not a
+ * single-copy dead end.
+ *
+ * Takes the directory to import, since there is no longer a canonical tree in
+ * the repo to default to:
+ *   npx tsx --env-file=.env scripts/import-challenges-to-db.ts challenges-export
  *
  * Idempotent: a challenge whose file tree already matches the row is skipped
  * without bumping its version. Anything else is written as a new version, with
  * a `ChallengeVersion` snapshot recorded. Challenges are imported as PUBLISHED,
- * since these are the ones already live.
+ * so re-importing an export that contained drafts publishes them — check the
+ * status column in the export's challenges.json first if that matters.
  *
- * It never deletes: a challenge removed from `challenges/` stays in the
- * database. Unpublish it from the admin UI (or delete the row by hand).
+ * It never deletes: a challenge absent from the tree stays in the database.
+ * Unpublish it from the admin UI (or delete the row by hand).
  */
+import path from "node:path";
 import { prisma } from "../src/lib/prisma";
 import { buildAllRows } from "./challenge-rows";
 import { asTree, type ChallengeTree } from "../src/lib/challenges/store/tree";
@@ -36,9 +42,18 @@ function canonical(tree: ChallengeTree): string {
 }
 
 async function main() {
-  const rows = await buildAllRows();
+  const arg = process.argv.slice(2).find((a) => !a.startsWith("--"));
+  if (!arg) {
+    throw new Error(
+      "Usage: import-challenges-to-db.ts <dir>  (e.g. challenges-export, " +
+        "produced by export-challenges-from-db.ts)",
+    );
+  }
+  const dir = path.resolve(arg);
+
+  const rows = await buildAllRows(dir);
   if (rows.length === 0) {
-    throw new Error("No challenges found under challenges/");
+    throw new Error(`No challenge directories found under ${dir}`);
   }
 
   let created = 0;
@@ -114,7 +129,8 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error("Import failed:", err);
+    // Message only: a usage error should read as usage, not as a stack trace.
+    console.error(`\nImport failed: ${err.message}`);
     process.exitCode = 1;
   })
   .finally(() => prisma.$disconnect());

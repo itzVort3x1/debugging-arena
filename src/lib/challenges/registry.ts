@@ -65,9 +65,11 @@ const aggregateCache = new Map<string, Promise<ChallengeAggregate>>();
 async function buildIndex(): Promise<Map<string, IndexEntry>> {
   const store = selectChallengeStore();
 
-  // Prefer the precomputed manifest (one read); fall back to listing the store
-  // and reading each summary when it's absent (local dev without a generated
-  // manifest). Both yield the same IndexEntry shape.
+  // One read gets the whole index: PostgresStore synthesizes index.json from a
+  // single query, so this branch is what actually runs. The fallback — list the
+  // store, read each summary — is kept because it is the only path that works
+  // for a store that has no manifest to serve, and both yield the same
+  // IndexEntry shape.
   const manifestRaw = await store.readText(MANIFEST_PATH);
   let entries: IndexEntry[];
   if (manifestRaw !== undefined) {

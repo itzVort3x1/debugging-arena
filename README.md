@@ -76,5 +76,6 @@ npm start
 - `src/components/ide` - the browser IDE (editor, tabs, terminal, panels)
 - `src/lib/runner` - sandbox materialization + Jest child-process runner
 - `src/lib/scoring.ts` - the deterministic 0–100 scoring formula
-- `challenges/` - challenge content (source, tests, hints); read from disk,
-  excluded from the app's type-check
+- `challenges/_schema.ts` - the challenge content types, shared by the loader
+  and the app. Content itself lives in the `Challenge` table and is authored in
+  the admin UI; back it up with `scripts/export-challenges-from-db.ts`

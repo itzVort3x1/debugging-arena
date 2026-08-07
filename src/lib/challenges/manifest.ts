@@ -1,9 +1,4 @@
-import {
-  listChallengeRoots,
-  loadChallengeSummary,
-  type ChallengeSummary,
-} from "./loader";
-import type { ChallengeStore } from "./store/types";
+import type { ChallengeSummary } from "./loader";
 import type { ChallengeMeta, Runtime } from "../../../challenges/_schema";
 
 /**
@@ -12,12 +7,11 @@ import type { ChallengeMeta, Runtime } from "../../../challenges/_schema";
  * every challenge's `meta.json` — the difference between one request and dozens
  * against a remote store.
  *
- * Two producers, and the difference matters. For the local `challenges/` tree
- * it is a file written by `scripts/build-manifest.ts`; when absent the registry
- * falls back to listing + per-challenge reads, so there it is an optimization,
- * never a requirement. `PostgresStore` instead *synthesizes* it on read, from
- * one query over the meta columns — so on the postgres path this module is
- * load-bearing rather than optional, and a computed index cannot drift.
+ * It is no longer a stored artifact anywhere. `PostgresStore` synthesizes it on
+ * read from one query over the meta columns, so the registry warms its entire
+ * meta tier in a single round-trip and a computed index cannot drift from the
+ * rows it describes — which is why this module is load-bearing rather than the
+ * optimization it started as.
  */
 
 /** Where the manifest lives, relative to the store root. */
@@ -39,29 +33,7 @@ export interface ChallengeManifest {
   challenges: ChallengeManifestEntry[];
 }
 
-/**
- * Build a manifest by reading every challenge summary from `store`. `pathFor`
- * maps a challenge to the store-relative root path the manifest should record
- * (defaults to the root it was read from — correct for a same-layout store; the
- * bucket seed overrides it to `<difficulty>/<slug>`).
- */
-export async function buildManifest(
-  store: ChallengeStore,
-  pathFor: (root: string, summary: ChallengeSummary) => string = (root) => root,
-): Promise<ChallengeManifest> {
-  const roots = await listChallengeRoots(store);
-  const challenges = await Promise.all(
-    roots.map(async (root) => {
-      const summary = await loadChallengeSummary(store, root);
-      return { path: pathFor(root, summary), ...summary };
-    }),
-  );
-  // Sort by slug so the manifest (and the listings it drives) is deterministic.
-  challenges.sort((a, b) => a.slug.localeCompare(b.slug));
-  return { version: new Date().toISOString(), challenges };
-}
-
-/** Serialize a manifest to the JSON text stored at {@link MANIFEST_PATH}. */
+/** Serialize a manifest to the JSON text served at {@link MANIFEST_PATH}. */
 export function serializeManifest(manifest: ChallengeManifest): string {
   return JSON.stringify(manifest, null, 2) + "\n";
 }

@@ -1,37 +1,22 @@
 import type { ChallengeStore } from "./types";
-import { FilesystemStore } from "./filesystem";
 import { PostgresStore } from "./postgres";
 
 /**
- * Pick the challenge store for this environment, mirroring how
- * `exec/select.ts` picks the runner executor. Controlled by
- * `ARENA_CHALLENGE_SOURCE`:
+ * The challenge store the app reads through: the `Challenge` table, and now the
+ * only source there is. `challenges/` left version control once the admin UI
+ * became the way challenges are authored, so there is no longer a filesystem
+ * backend to choose between — and with it went `ARENA_CHALLENGE_SOURCE`.
  *
- *   - `filesystem` (default) — the local `challenges/` dir (dev + test).
- *   - `postgres`             — the `Challenge` table, the source of truth
- *                              (needs DATABASE_URL).
+ * The seam itself is worth keeping even with one implementation: `MemoryStore`
+ * still satisfies it, which is what lets the admin editor validate an unsaved
+ * tree through the same loader that will later serve it.
  *
- * A process-wide singleton. Stores that cache (postgres) expose `invalidate()`,
- * which `invalidateChallengeCache()` calls.
+ * A process-wide singleton, because `PostgresStore` memoizes rows — that is
+ * what `invalidate()` exists to clear, via `invalidateChallengeCache()`.
  */
 let store: ChallengeStore | null = null;
 
 export function selectChallengeStore(): ChallengeStore {
-  if (store) return store;
-
-  const source = process.env.ARENA_CHALLENGE_SOURCE ?? "filesystem";
-  switch (source) {
-    case "filesystem":
-      store = new FilesystemStore();
-      break;
-    case "postgres":
-      store = new PostgresStore();
-      break;
-    default:
-      throw new Error(
-        `Unknown ARENA_CHALLENGE_SOURCE "${source}" ` +
-          '(expected "filesystem" or "postgres").',
-      );
-  }
+  if (!store) store = new PostgresStore();
   return store;
 }
