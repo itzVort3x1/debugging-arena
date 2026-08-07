@@ -77,21 +77,30 @@ model VerificationToken {
 // ----- Domain tables -----
 
 model DebugSession {
-  id            String    @id @default(cuid())
-  userId        String
-  challengeSlug String
+  id               String    @id @default(cuid())
+  userId           String
+  challengeSlug    String
   // Language variant this session solves the challenge in (a Runtime value).
   // A challenge is one session per (userId, challengeSlug, language), so the
   // same challenge can be solved independently in each language it offers.
-  language      String    @default("node")
-  status        String    @default("IN_PROGRESS") // SessionStatus enum (string for SQLite)
-  startedAt     DateTime  @default(now())
-  completedAt   DateTime?
-  hintsUsed     Int       @default(0)
-  attemptsCount Int       @default(0)
-  timeTaken     Int? // seconds
-  score         Int?
-  fileState     String    @default("{}") // JSON-encoded Record<filename, content>
+  language         String    @default("node")
+  // ChallengeVersion this session is pinned to, stamped at creation. Content is
+  // resolved from that snapshot rather than the live Challenge row, so an admin
+  // publishing an edit cannot move the description, tests or hints under
+  // someone who is mid-session. Version is challenge-wide, not per-language.
+  //
+  // Nullable, and it stays that way: rows created before pinning existed have
+  // nothing to point at, and they fall back to live content. A default would
+  // have to invent a version those sessions were never actually served.
+  challengeVersion Int?
+  status           String    @default("IN_PROGRESS") // SessionStatus enum (string for SQLite)
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  hintsUsed        Int       @default(0)
+  attemptsCount    Int       @default(0)
+  timeTaken        Int? // seconds
+  score            Int?
+  fileState        String    @default("{}") // JSON-encoded Record<filename, content>
 
   // Denormalized summary of the most recent test run. TestRun keeps full
   // history (Phase 7); these fields exist for O(1) badge reads.
@@ -100,11 +109,15 @@ model DebugSession {
   lastRunTotal  Int?
   lastRunAt     DateTime?
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  challenge    Challenge     @relation(fields: [challengeSlug], references: [slug], onDelete: Restrict)
-  testRuns     TestRun[]
-  hintRequests HintRequest[]
-  postmortem   Postmortem?
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge     Challenge         @relation(fields: [challengeSlug], references: [slug], onDelete: Restrict)
+  // Composite FK onto ChallengeVersion's (challengeSlug, version) unique. With
+  // challengeVersion NULL the constraint is simply not checked, which is what
+  // lets pre-pinning rows coexist.
+  pinnedVersion ChallengeVersion? @relation(fields: [challengeSlug, challengeVersion], references: [challengeSlug, version], onDelete: Restrict)
+  testRuns      TestRun[]
+  hintRequests  HintRequest[]
+  postmortem    Postmortem?
 
   @@index([userId, challengeSlug, language])
   // challengeSlug is not the leading column of the composite index above, so it
@@ -250,7 +263,10 @@ model ChallengeVersion {
   createdById String?
   note        String?
 
-  challenge Challenge @relation(fields: [challengeSlug], references: [slug], onDelete: Cascade)
+  challenge Challenge      @relation(fields: [challengeSlug], references: [slug], onDelete: Cascade)
+  // Sessions pinned to this snapshot. Restrict on that side, so a version
+  // someone is mid-session on cannot be deleted out from under them.
+  sessions  DebugSession[]
 
   @@unique([challengeSlug, version])
 }

@@ -2,6 +2,10 @@ import type { z } from "zod";
 import type { ChallengeDefinition, Runtime } from "../../../challenges/_schema";
 import { getAdminUserId, getSessionUserId } from "@/lib/auth-helpers";
 import { getChallenge, getChallengeLanguages } from "@/lib/challenges/registry";
+import {
+    getPinnedChallenge,
+    getPinnedChallengeLanguages,
+} from "@/lib/challenges/pinned";
 import { HttpError } from "./http";
 
 /**
@@ -90,28 +94,42 @@ export function assertEditable<T extends { status: string }>(
 }
 
 /**
- * Resolve the challenge variant for a stored session's slug + language. A
- * missing challenge here means a session references a slug that is no longer
- * registered - a server-side inconsistency, hence 500.
+ * Resolve the challenge content a stored session should be served.
+ *
+ * Reads the session's pinned `ChallengeVersion` when it has one, so an admin
+ * publishing an edit cannot change the description, hints or test files under
+ * an attempt already in progress — and a score stays computed against the
+ * content the user was actually given. Sessions created before pinning existed
+ * have no version and read through to the live challenge, unchanged.
+ *
+ * A missing challenge here means a session references content that is no longer
+ * resolvable - a server-side inconsistency, hence 500.
  *
  * Tolerant of a stale/mismatched `language`: if it isn't one the challenge
  * offers (e.g. a legacy row's default that predates the variant), it falls
- * back to the challenge's default variant, so single-language sessions can
- * never 500 on a language mismatch.
+ * back to the default variant, so single-language sessions can never 500 on a
+ * language mismatch.
  */
 export async function requireChallenge(
     slug: string,
     language?: string,
+    pinnedVersion?: number | null,
 ): Promise<ChallengeDefinition> {
-    const languages = await getChallengeLanguages(slug);
+    const languages =
+        pinnedVersion == null
+            ? await getChallengeLanguages(slug)
+            : await getPinnedChallengeLanguages(slug, pinnedVersion);
     if (!languages) {
         throw new HttpError(500, "Challenge no longer registered");
     }
     const resolved =
         language && languages.includes(language as Runtime)
             ? (language as Runtime)
-            : undefined; // let getChallenge pick the default variant
-    const challenge = await getChallenge(slug, resolved);
+            : undefined; // let the resolver pick the default variant
+    const challenge =
+        pinnedVersion == null
+            ? await getChallenge(slug, resolved)
+            : await getPinnedChallenge(slug, pinnedVersion, resolved);
     if (!challenge) {
         throw new HttpError(500, "Challenge no longer registered");
     }

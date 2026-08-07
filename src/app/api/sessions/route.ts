@@ -80,10 +80,41 @@ export const POST = route(async (req: Request) => {
         seededFileState[file.path] = file.content;
     }
 
+    // Pin the session to the currently published version, so a later admin
+    // edit cannot change the content underneath it.
+    //
+    // Confirming the matching ChallengeVersion snapshot exists is not
+    // redundant: the pin is a foreign key onto it, so pinning a version with no
+    // snapshot would fail the insert and break session creation outright. Every
+    // write path does advance the two together (import, create, publish), which
+    // is exactly why a divergence here should degrade to an unpinned session
+    // rather than a 500 - it would mean an invariant broke somewhere upstream,
+    // and refusing to start the challenge is the worse of the two failures.
+    //
+    // Not pinned to the latest snapshot instead: if the row and its snapshots
+    // ever disagreed, the latest snapshot would be content the user was NOT
+    // served, and silently serving the wrong version is worse than not pinning.
+    const challengeRow = await prisma.challenge.findUnique({
+        where: { slug: challengeSlug },
+        select: { version: true },
+    });
+    const pinnedVersion = challengeRow
+        ? await prisma.challengeVersion.findUnique({
+              where: {
+                  challengeSlug_version: {
+                      challengeSlug,
+                      version: challengeRow.version,
+                  },
+              },
+              select: { version: true },
+          })
+        : null;
+
     const created = await prisma.debugSession.create({
         data: {
             userId,
             challengeSlug,
+            challengeVersion: pinnedVersion?.version ?? null,
             language: resolvedLanguage,
             status: "IN_PROGRESS",
             fileState: JSON.stringify(seededFileState),

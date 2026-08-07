@@ -62,6 +62,7 @@ export const POST = route<RouteContext>(async (req, { params }) => {
     const challenge = await requireChallenge(
         session.challengeSlug,
         session.language,
+        session.challengeVersion,
     );
 
     // For a file run, the entry must be one of the challenge's editable files.
