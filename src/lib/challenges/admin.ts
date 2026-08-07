@@ -153,8 +153,6 @@ export async function getChallengeVersion(
 export interface CreateChallengeInput {
   slug: string;
   tree: ChallengeTree;
-  /** Author, recorded on the first version snapshot. */
-  userId: string;
 }
 
 export type CreateChallengeResult =
@@ -162,7 +160,12 @@ export type CreateChallengeResult =
   | { created: false; reason: "taken" | "invalid"; errors: string[] };
 
 /**
- * Create a challenge from a scaffolded tree, always as a DRAFT.
+ * Create a challenge from a scaffolded tree, always as a DRAFT at version 0.
+ *
+ * No `ChallengeVersion` is written. History records what was live, and a draft
+ * never was — snapshotting it would put a row in the history panel for content
+ * no user could have seen, and would push the first *published* version to 2.
+ * Version 0 says "nothing published yet" and the first publish makes it 1.
  *
  * The tree must validate: unlike an edit, there is no earlier good version to
  * fall back on, and the meta projection columns are NOT NULL — an unparseable
@@ -175,7 +178,7 @@ export type CreateChallengeResult =
 export async function createChallenge(
   input: CreateChallengeInput,
 ): Promise<CreateChallengeResult> {
-  const { slug, tree, userId } = input;
+  const { slug, tree } = input;
 
   const validation = await validateChallengeTree(slug, tree);
   if (!validation.ok || !validation.summary) {
@@ -197,25 +200,9 @@ export async function createChallenge(
         defaultLanguage: summary.defaultLanguage,
         content: tree,
         status: "DRAFT",
-        version: 1,
-        versions: {
-          create: {
-            version: 1,
-            content: tree,
-            meta: {
-              title: summary.meta.title,
-              difficulty: summary.meta.difficulty,
-              tags: summary.meta.tags,
-              timeLimit: summary.meta.timeLimit,
-              stack: summary.meta.stack,
-              issueContext: summary.meta.issueContext,
-              languages: summary.languages,
-              defaultLanguage: summary.defaultLanguage,
-            },
-            createdById: userId,
-            note: "Created from scaffold",
-          },
-        },
+        // 0 means "never published". The first publish increments to 1, so a
+        // challenge's version numbering starts where its history does.
+        version: 0,
       },
     });
   } catch (err) {

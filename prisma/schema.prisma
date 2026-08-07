@@ -224,7 +224,10 @@ model Challenge {
   content Json
 
   status      String    @default("DRAFT") // DRAFT | PUBLISHED
-  version     Int       @default(1)
+  // Published version number, and the version a session pins to. 0 means never
+  // published: a draft writes no ChallengeVersion, so the first publish makes
+  // this 1 and version numbering starts where the history does.
+  version     Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?

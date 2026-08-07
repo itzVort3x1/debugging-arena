@@ -39,7 +39,7 @@ const createSchema = z.object({
  * validated it.
  */
 export const POST = route(async (req) => {
-  const userId = await requireAdmin();
+  await requireAdmin();
   const body = await parseJsonBody(req, createSchema);
 
   const slug = body.slug.trim().toLowerCase();
@@ -62,7 +62,10 @@ export const POST = route(async (req) => {
     runtime: body.runtime as (typeof SUPPORTED_RUNTIMES)[number],
   });
 
-  const result = await createChallenge({ slug, tree, userId });
+  // The creator is not recorded here: a draft writes no version row, and
+  // authorship is captured on the first publish instead. requireAdmin above
+  // still gates the request, its return value just has nothing to record.
+  const result = await createChallenge({ slug, tree });
   if (!result.created) {
     throw new HttpError(
       result.reason === "taken" ? 409 : 400,
