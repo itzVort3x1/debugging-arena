@@ -46,8 +46,9 @@ export async function readTreeFromDisk(dir: string): Promise<ChallengeTree> {
 
 /**
  * The challenge directories under `dir`. `_`/`.` prefixes are skipped, matching
- * `listChallengeRoots` — that is what keeps `_schema.ts` and `_variant-fixture`
- * out of the import.
+ * `listChallengeRoots`, so a tree can carry sibling files (an export's
+ * `challenges.json`, a stray `_schema.ts`) without them being read as
+ * challenges.
  */
 export async function listChallengeDirs(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -111,9 +112,7 @@ export async function buildChallengeRow(
 }
 
 /** Every challenge under `dir` as a row, ordered by slug. */
-export async function buildAllRows(
-  dir: string = path.join(process.cwd(), "challenges"),
-): Promise<ChallengeRow[]> {
+export async function buildAllRows(dir: string): Promise<ChallengeRow[]> {
   const names = await listChallengeDirs(dir);
   const trees: Record<string, ChallengeTree> = {};
   for (const name of names) {

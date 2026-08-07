@@ -22,5 +22,9 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "challenges/*/**"]
+  // challenge content is written against the sandbox layout, not the app's, so
+  // it never type-checks here. `challenges-export/` is where
+  // scripts/export-challenges-from-db.ts writes, and a backup run would
+  // otherwise break `tsc`.
+  "exclude": ["node_modules", "challenges/*/**", "challenges-export/**"]
 }
