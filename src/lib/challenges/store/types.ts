@@ -18,7 +18,26 @@ export interface ChallengeEntry {
   isDir: boolean;
 }
 
+/** Which backend a {@link ChallengeStore} instance is. */
+export type ChallengeStoreKind =
+  | "filesystem"
+  | "postgres"
+  | "supabase"
+  | "memory";
+
 export interface ChallengeStore {
+  /**
+   * Which backend this instance actually is, for diagnostics.
+   *
+   * Declared by each store rather than derived, because both obvious shortcuts
+   * are worthless here: a class name is renamed by the production minifier, and
+   * re-reading `ARENA_CHALLENGE_SOURCE` to report what `ARENA_CHALLENGE_SOURCE`
+   * selected is circular — it would confirm the variable's value, not that the
+   * store it names is the one serving reads. This is the constructed object
+   * speaking for itself.
+   */
+  readonly kind: ChallengeStoreKind;
+
   /**
    * Read a store-relative text file. Resolves to `undefined` when the file
    * does not exist (so optional files like `hints.json` need no separate

@@ -110,6 +110,8 @@ function metaOf(row: ChallengeRow): ChallengeMeta {
 }
 
 export class PostgresStore implements ChallengeStore {
+  readonly kind = "postgres" as const;
+
   private readonly source: ChallengeRowSource;
 
   /** Rows memoized for the process; cleared by {@link invalidate}. */

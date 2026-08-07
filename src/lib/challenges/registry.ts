@@ -166,6 +166,38 @@ export function invalidateChallengeCache(): void {
   selectChallengeStore().invalidate?.();
 }
 
+/** A read-only snapshot of the registry caches, for the admin source probe. */
+export interface ChallengeCacheStatus {
+  /** True once the meta index has been built at least once. */
+  warm: boolean;
+  /** When the current index was built, or null while cold. */
+  loadedAt: string | null;
+  /** Age of the current index in ms, or null while cold. */
+  ageMs: number | null;
+  /** Configured TTL; `0` means caching is disabled. */
+  ttlMs: number;
+  /** Slugs in the meta index. */
+  indexedSlugs: number;
+  /** Slugs whose full content has been loaded into the content tier. */
+  loadedContentSlugs: number;
+}
+
+/**
+ * Describe the cache without touching it. Deliberately does not call
+ * {@link ensureIndex}: a probe that warmed the cache in order to report on it
+ * could never report a cold one.
+ */
+export function describeChallengeCache(): ChallengeCacheStatus {
+  return {
+    warm: indexCache !== null,
+    loadedAt: indexCache ? new Date(indexCache.loadedAt).toISOString() : null,
+    ageMs: indexCache ? Date.now() - indexCache.loadedAt : null,
+    ttlMs: cacheTtlMs(),
+    indexedSlugs: indexCache?.index.size ?? 0,
+    loadedContentSlugs: aggregateCache.size,
+  };
+}
+
 async function buildAggregate(entry: IndexEntry): Promise<ChallengeAggregate> {
   const store = selectChallengeStore();
   const variants = new Map<Runtime, ChallengeDefinition>();

@@ -11,6 +11,8 @@ const LIST_PAGE = 100;
  * `scripts/seed-challenges.ts`.
  */
 export class SupabaseStore implements ChallengeStore {
+  readonly kind = "supabase" as const;
+
   private readonly bucket: string;
 
   constructor(bucket: string = challengeBucket()) {
