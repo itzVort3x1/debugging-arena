@@ -6,6 +6,8 @@ import {
     ACCEPTED_IMAGE_TYPES,
     avatarStorageConfigured,
     deleteAvatarByUrl,
+    InvalidImageError,
+    normalizeAvatar,
     uploadAvatar,
 } from "@/lib/storage/avatars";
 
@@ -43,12 +45,22 @@ export const POST = route(async (req: Request) => {
     if (file.size > MAX_BYTES) {
         throw new HttpError(413, "Image must be 5MB or smaller");
     }
-    // Content type is client-supplied and therefore a hint, not proof. It only
-    // decides the stored extension and is checked against an allow-list; a
-    // mislabelled file is served as the type it claims, which is why the bucket
-    // holds nothing but avatars and is read-only to everyone but this route.
+    // Content type is client-supplied and therefore a hint, not proof - it just
+    // rejects the obvious cases before we spend anything decoding. What settles
+    // whether this is an image is `normalizeAvatar`.
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
         throw new HttpError(415, "Image must be PNG, JPEG, WebP or GIF");
+    }
+
+    // Nothing reaches the bucket in a format we didn't produce.
+    let image: Buffer;
+    try {
+        image = await normalizeAvatar(file);
+    } catch (err) {
+        if (err instanceof InvalidImageError) {
+            throw new HttpError(415, err.message);
+        }
+        throw err;
     }
 
     const previous = await prisma.user.findUnique({
@@ -58,7 +70,7 @@ export const POST = route(async (req: Request) => {
 
     let url: string;
     try {
-        url = await uploadAvatar(userId, file);
+        url = await uploadAvatar(userId, image);
     } catch (err) {
         throw new HttpError(
             502,
