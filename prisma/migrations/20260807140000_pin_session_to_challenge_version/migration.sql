@@ -2,7 +2,7 @@
 --
 -- Challenges are now authored in the admin UI, so a published edit takes effect
 -- immediately. Without a pin that edit lands on anyone mid-session: the
--- description, hints and - worse - the test files can change underneath a run
+-- description, hints and — worse — the test files can change underneath a run
 -- that has already started, and the score is computed against whatever happens
 -- to be live at submit rather than what the user was actually given.
 --

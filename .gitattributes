@@ -1,0 +1,11 @@
+# Prisma checksums each applied migration by the bytes of its migration.sql and
+# refuses to run when one no longer matches what was recorded. With
+# core.autocrlf=true and no rule here, a plain checkout rewrites LF to CRLF and
+# every already-applied migration "changes" - which is what happened: four
+# migrations were recorded with LF and later checked out as CRLF, and
+# `prisma migrate dev` then offered to reset the database over it.
+#
+# Pinning LF makes the working-tree bytes stable across machines and checkouts.
+# Scoped to migrations rather than the whole repo: these are the only files
+# whose exact bytes are load-bearing.
+prisma/migrations/**/*.sql text eol=lf

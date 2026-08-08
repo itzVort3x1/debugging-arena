@@ -9,7 +9,7 @@
 -- so the constraint can be added.
 --
 -- NOT NULL-safe and additive: no column changes, no row rewrites. The one way
--- it can fail is a referencing row whose slug has no Challenge - in which case
+-- it can fail is a referencing row whose slug has no Challenge — in which case
 -- Postgres refuses the whole ALTER and nothing is left half-applied. Find them
 -- with, e.g.:
 --   SELECT DISTINCT "challengeSlug" FROM "DebugSession"
@@ -19,7 +19,7 @@
 -- are owned by the challenge; these three are not. They are a user's record of
 -- what they did, including scores stamped at submit. Nothing in the app deletes
 -- a Challenge (the admin UI unpublishes via `status`; there is no DELETE route),
--- so the only way to reach this rule is a manual database operation - exactly
+-- so the only way to reach this rule is a manual database operation — exactly
 -- the moment a refusal is worth more than a silent cascade.
 --
 -- The indexes are not redundant with the existing composite ones: challengeSlug
