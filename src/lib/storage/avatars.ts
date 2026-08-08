@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -15,15 +16,40 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const BUCKET = process.env.SUPABASE_AVATAR_BUCKET ?? "avatars";
 
-/** Extension per accepted MIME type. Doubles as the upload allow-list. */
-const EXTENSIONS: Record<string, string> = {
-    "image/png": "png",
-    "image/jpeg": "jpg",
-    "image/webp": "webp",
-    "image/gif": "gif",
-};
+/**
+ * Types the upload endpoint will consider. This is an early reject, not the
+ * real gate - the browser supplies the MIME type and can say anything. What
+ * actually decides is whether sharp can decode the bytes.
+ */
+export const ACCEPTED_IMAGE_TYPES = [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+];
 
-export const ACCEPTED_IMAGE_TYPES = Object.keys(EXTENSIONS);
+/** Every stored avatar is normalized to this, whatever came in. */
+const STORED_EXTENSION = "webp";
+const STORED_CONTENT_TYPE = "image/webp";
+
+/** Square edge, in px. Covers a 96px avatar on a 2x display with room spare. */
+const EDGE = 256;
+
+/**
+ * Ceiling on decoded pixels, independent of file size. A few hundred KB of
+ * highly compressible PNG can decode to hundreds of megapixels, so the byte cap
+ * on the request is no protection on its own. 50MP still clears any real
+ * camera.
+ */
+const MAX_INPUT_PIXELS = 50_000_000;
+
+/** A file we could not turn into an image - the caller's fault, not ours. */
+export class InvalidImageError extends Error {
+    constructor(message = "Could not read that file as an image") {
+        super(message);
+        this.name = "InvalidImageError";
+    }
+}
 
 let cached: SupabaseClient | null = null;
 
@@ -53,44 +79,88 @@ export function avatarStorageConfigured(): boolean {
 }
 
 /**
- * Object key for a user's avatar: `<userId>_<epochMillis>.<ext>`.
+ * Object key for a user's avatar: `<userId>_<epochMillis>.webp`.
  *
  * The timestamp makes every upload a new object rather than an overwrite, which
  * sidesteps CDN caching entirely - a replaced avatar appears immediately
  * because its URL changed, instead of waiting out a cached copy of a stable
  * path. The previous object is deleted separately.
  */
-function objectKey(userId: string, contentType: string): string {
-    return `${userId}_${Date.now()}.${EXTENSIONS[contentType]}`;
+function objectKey(userId: string): string {
+    return `${userId}_${Date.now()}.${STORED_EXTENSION}`;
 }
 
 /**
- * Store `file` as `userId`'s avatar and return its public URL.
+ * Decode an upload and re-encode it as a square WebP avatar.
  *
- * Throws when storage is unconfigured, the type is not accepted, or Supabase
- * rejects the write - the caller maps those to HTTP status codes.
+ * This - not the MIME allow-list - is what establishes that the bytes are an
+ * image at all, since decoding something that isn't one fails here. Storing the
+ * re-encoded output rather than the original also means:
+ *
+ *   - a 5MB camera photo becomes ~15KB, and the avatar renders on every
+ *     authenticated page;
+ *   - EXIF goes away. Phone photos carry GPS coordinates, and these objects
+ *     live at public URLs;
+ *   - nothing reaches the bucket in a format we didn't produce, so a file
+ *     crafted to be valid in two formats at once can't be served back as the
+ *     more interesting one.
+ *
+ * Animated GIFs are flattened to their first frame - sharp only carries
+ * animation through with `{ animated: true }`, and resizing every frame costs
+ * far more than a static avatar is worth.
+ *
+ * Throws {@link InvalidImageError} for anything undecodable.
+ */
+export async function normalizeAvatar(file: File): Promise<Buffer> {
+    const input = Buffer.from(await file.arrayBuffer());
+    try {
+        return await sharp(input, {
+            limitInputPixels: MAX_INPUT_PIXELS,
+            // Tolerate the malformed-but-decodable files real cameras and
+            // editors emit; sharp's default rejects on any libvips warning,
+            // which turns ordinary phone JPEGs into failed uploads.
+            failOn: "none",
+        })
+            // Must precede resize: applies the EXIF orientation flag while the
+            // image is still in its original frame, then drops the metadata.
+            .rotate()
+            .resize(EDGE, EDGE, { fit: "cover", position: "centre" })
+            .webp({ quality: 82 })
+            .toBuffer();
+    } catch (err) {
+        throw new InvalidImageError(
+            err instanceof Error && /pixel|limit/i.test(err.message)
+                ? "Image resolution is too large"
+                : undefined,
+        );
+    }
+}
+
+/**
+ * Store an already-normalized avatar for `userId` and return its public URL.
+ *
+ * Throws when storage is unconfigured or Supabase rejects the write; the caller
+ * maps those to HTTP status codes.
  */
 export async function uploadAvatar(
     userId: string,
-    file: File,
+    image: Buffer,
 ): Promise<string> {
     const supabase = client();
     if (!supabase) {
         throw new Error("Avatar storage is not configured");
     }
-    if (!EXTENSIONS[file.type]) {
-        throw new Error(`Unsupported image type: ${file.type || "unknown"}`);
-    }
 
-    const key = objectKey(userId, file.type);
-    const { error } = await supabase.storage
-        .from(BUCKET)
-        .upload(key, await file.arrayBuffer(), {
-            contentType: file.type,
-            // Keys carry a timestamp, so a collision means something is wrong;
-            // fail loudly rather than clobbering another object.
-            upsert: false,
-        });
+    const key = objectKey(userId);
+    const { error } = await supabase.storage.from(BUCKET).upload(key, image, {
+        contentType: STORED_CONTENT_TYPE,
+        // Keys are immutable - a new upload is a new key - so the object at
+        // this URL can never change and may be cached indefinitely.
+        cacheControl: "31536000, immutable",
+        // Keys carry a timestamp, so a collision means something is wrong;
+        // fail loudly rather than clobbering another object.
+        upsert: false,
+    });
     if (error) throw new Error(error.message);
 
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(key);
