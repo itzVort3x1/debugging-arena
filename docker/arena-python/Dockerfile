@@ -1,4 +1,4 @@
-# arena-python — minimal image for running Python/pytest challenge suites in
+# arena-python - minimal image for running Python/pytest challenge suites in
 # isolation. Mirrors arena-node: the runner (src/lib/runner/exec/docker.ts) runs
 # pytest here with the host environment dropped, no network, capabilities
 # dropped, a read-only rootfs, and resource caps.
@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir pytest==8.3.4
 ENV HOME=/tmp
 
 # Persistent pytest cache lives on a named volume mounted at /cache. python:slim
-# ships no non-root user, so create one and pre-own /cache — a fresh volume then
+# ships no non-root user, so create one and pre-own /cache - a fresh volume then
 # inherits that ownership, letting the unprivileged user below write to it.
 RUN useradd --create-home --uid 1000 arena \
     && mkdir -p /cache && chown arena:arena /cache

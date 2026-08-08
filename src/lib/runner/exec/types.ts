@@ -5,7 +5,7 @@
  * in-process `spawn`, no isolation) or inside a locked-down container. The
  * paths a command must reference (tool binaries, the cache, the working dir)
  * differ between those two worlds, so an Executor supplies them via `ExecEnv`
- * — deliberately language-neutral — and each runner resolves its own tool
+ * - deliberately language-neutral - and each runner resolves its own tool
  * locations against it.
  */
 

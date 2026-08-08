@@ -15,7 +15,7 @@ import os from "node:os";
  * shared queue (Redis/worker fleet), which is out of scope here.
  */
 
-/** Thrown by `acquire` when the queue is full — callers should shed load. */
+/** Thrown by `acquire` when the queue is full - callers should shed load. */
 export class RunnerBusyError extends Error {
     readonly code = "RUNNER_BUSY";
     constructor(
@@ -37,7 +37,7 @@ function abortError(): Error {
 }
 
 interface AcquireOptions {
-    /** Aborting while queued drops the waiter and rejects — never starts a run. */
+    /** Aborting while queued drops the waiter and rejects - never starts a run. */
     signal?: AbortSignal;
     /** Called once, only if the request has to wait for a slot. */
     onQueued?: () => void;

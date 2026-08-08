@@ -119,7 +119,7 @@ export interface ArenaState {
      * Hint bodies are withheld from the page payload, so this is how a hint
      * revealed during this page's life gets something to render. Keyed by
      * language because the reveal is shared across variants and the switcher
-     * swaps them without a round-trip — folding in every language now is what
+     * swaps them without a round-trip - folding in every language now is what
      * keeps a later switch from showing an owned hint as empty.
      */
     applyRevealedHint: (
@@ -312,7 +312,11 @@ export const useArenaStore = create<ArenaState>()(
                     (h) => h.level === level,
                 );
                 const activeLanguage = state.session?.language;
-                if (active && activeLanguage && contentByLanguage[activeLanguage]) {
+                if (
+                    active &&
+                    activeLanguage &&
+                    contentByLanguage[activeLanguage]
+                ) {
                     active.content = contentByLanguage[activeLanguage];
                 }
             }),
@@ -331,7 +335,8 @@ export const useArenaStore = create<ArenaState>()(
                     activeLanguage &&
                     solutionByLanguage[activeLanguage]
                 ) {
-                    state.challenge.solution = solutionByLanguage[activeLanguage];
+                    state.challenge.solution =
+                        solutionByLanguage[activeLanguage];
                 }
             }),
 

@@ -42,13 +42,13 @@ export interface LanguageRunner {
 
     /**
      * How to invoke the test suite. `env` gives the tool paths (node, jest,
-     * cache) and `workDir` is where the sandbox is seen from — the host temp
+     * cache) and `workDir` is where the sandbox is seen from - the host temp
      * dir under the host executor, or `/work` inside a container.
      */
     command(env: ExecEnv, workDir: string): RunCommand;
 
     /**
-     * How to execute a single editable file for its console output only — the
+     * How to execute a single editable file for its console output only - the
      * "just run my file and see the logs" path (no tests, no pass/fail, no
      * scoring). `entryPath` is the sandbox-relative path of the file to run.
      *

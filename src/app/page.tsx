@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getAdminUserId } from "@/lib/auth-helpers";
 import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import { TerminalCarousel } from "@/components/TerminalCarousel";
@@ -26,6 +27,9 @@ export default async function HomePage() {
         ? await loadBestProgress(session.user.id)
         : {};
 
+    // Only to decide whether the nav offers the admin link; /admin gates itself.
+    const isAdmin = session?.user?.id ? !!(await getAdminUserId()) : false;
+
     return (
         <div className="relative min-h-screen overflow-hidden bg-vscode-bg text-vscode-fg">
             {/* Ambient glows */}
@@ -43,7 +47,7 @@ export default async function HomePage() {
             />
 
             <div className="relative mx-auto max-w-6xl px-6">
-                <TopNav user={user} />
+                <TopNav user={user} isAdmin={isAdmin} />
                 <Hero user={user} />
                 <HowItWorks />
                 <FeaturedChallenges
@@ -61,7 +65,13 @@ export default async function HomePage() {
 
 // ---------------------- nav ----------------------
 
-function TopNav({ user }: { user: SessionUser | null }) {
+function TopNav({
+    user,
+    isAdmin,
+}: {
+    user: SessionUser | null;
+    isAdmin: boolean;
+}) {
     return (
         <header className="flex h-16 items-center justify-between">
             <Link
@@ -72,7 +82,11 @@ function TopNav({ user }: { user: SessionUser | null }) {
                 Debugging Arena
             </Link>
             <nav className="flex items-center gap-2 text-sm">
-                {user ? <AuthedNav user={user} /> : <AnonNav />}
+                {user ? (
+                    <AuthedNav user={user} isAdmin={isAdmin} />
+                ) : (
+                    <AnonNav />
+                )}
             </nav>
         </header>
     );
@@ -98,7 +112,13 @@ function AnonNav() {
     );
 }
 
-function AuthedNav({ user }: { user: SessionUser }) {
+function AuthedNav({
+    user,
+    isAdmin,
+}: {
+    user: SessionUser;
+    isAdmin: boolean;
+}) {
     return (
         <>
             <Link
@@ -107,7 +127,7 @@ function AuthedNav({ user }: { user: SessionUser }) {
             >
                 Challenges
             </Link>
-            <DashboardMenu user={user} />
+            <DashboardMenu user={user} isAdmin={isAdmin} />
         </>
     );
 }

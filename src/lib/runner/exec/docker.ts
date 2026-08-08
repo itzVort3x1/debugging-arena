@@ -22,7 +22,7 @@ function cacheVolumeFor(image: string): string {
 function isolationArgs(): string[] {
     return [
         "--rm",
-        // No network at all — challenge/user code cannot phone home.
+        // No network at all - challenge/user code cannot phone home.
         "--network=none",
         // Drop every Linux capability; nothing here needs any.
         "--cap-drop=ALL",
@@ -47,7 +47,11 @@ let dockerCheck: Promise<void> | undefined;
 function assertDockerAvailable(): Promise<void> {
     if (!dockerCheck) {
         dockerCheck = new Promise<void>((resolve, reject) => {
-            const proc = spawn("docker", ["version", "--format", "{{.Server.Version}}"]);
+            const proc = spawn("docker", [
+                "version",
+                "--format",
+                "{{.Server.Version}}",
+            ]);
             let err = "";
             proc.stderr?.on("data", (b) => (err += b.toString()));
             proc.on("error", () =>
@@ -68,7 +72,7 @@ function assertDockerAvailable(): Promise<void> {
                 );
             });
         });
-        // Don't cache a transient failure — let the next run retry.
+        // Don't cache a transient failure - let the next run retry.
         dockerCheck.catch(() => {
             dockerCheck = undefined;
         });
@@ -106,7 +110,7 @@ export const dockerExecutor: Executor = {
         const name = `arena-run-${crypto.randomUUID()}`;
         const cacheVolume = cacheVolumeFor(image);
 
-        // Only the command's own env is passed — the host environment is NOT
+        // Only the command's own env is passed - the host environment is NOT
         // forwarded, so no host secrets reach the container.
         const envArgs = Object.entries(command.env ?? {}).flatMap(([k, v]) => [
             "-e",
@@ -133,7 +137,7 @@ export const dockerExecutor: Executor = {
         const proc = spawn("docker", dockerArgs);
         return streamProcess(proc, handlers, timeoutMs, () => {
             // Killing the local `docker run` client does not stop the
-            // container; kill it by name. Fire-and-forget — the container is
+            // container; kill it by name. Fire-and-forget - the container is
             // `--rm`, and the client exits once it's gone.
             spawn("docker", ["kill", name]);
             proc.kill("SIGKILL");

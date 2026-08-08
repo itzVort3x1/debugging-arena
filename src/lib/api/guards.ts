@@ -29,7 +29,7 @@ export async function requireUserId(): Promise<string> {
 /**
  * Require an authenticated admin, returning their user id.
  *
- * Answers 404 — not 401/403 — for everyone else, anonymous or merely
+ * Answers 404 - not 401/403 - for everyone else, anonymous or merely
  * non-admin, so the admin surface does not advertise its own existence. Same
  * don't-leak reasoning as `assertOwned`, and it matches the revalidate route,
  * which 404s when its secret is unset.
@@ -104,7 +104,7 @@ export function assertEditable<T extends { status: string }>(
  *
  * Needed by the reveal routes. A reveal is shared per (user, challenge) across
  * languages, so revealing level 2 in Node has to hand back level 2 in Python
- * as well — otherwise switching language after a reveal would show a hint the
+ * as well - otherwise switching language after a reveal would show a hint the
  * user owns with nothing in it until they reloaded.
  */
 export async function requireChallengeVariants(
@@ -126,7 +126,7 @@ export async function requireChallengeVariants(
  *
  * Reads the session's pinned `ChallengeVersion` when it has one, so an admin
  * publishing an edit cannot change the description, hints or test files under
- * an attempt already in progress — and a score stays computed against the
+ * an attempt already in progress - and a score stays computed against the
  * content the user was actually given. Sessions created before pinning existed
  * have no version and read through to the live challenge, unchanged.
  *

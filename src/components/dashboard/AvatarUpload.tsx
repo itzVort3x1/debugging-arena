@@ -21,7 +21,7 @@ export interface AvatarUploadProps {
 
 /**
  * Circular avatar with a click-to-upload affordance. Selecting a file shows a
- * local preview (via object URL) but does NOT persist anything — persistence is
+ * local preview (via object URL) but does NOT persist anything - persistence is
  * intentionally out of scope for now. Reusable anywhere an editable avatar is
  * needed; pass `onFileSelected` to hook up real upload later.
  */
@@ -69,11 +69,7 @@ export function AvatarUpload({
         >
             {src ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                    src={src}
-                    alt=""
-                    className="h-full w-full object-cover"
-                />
+                <img src={src} alt="" className="h-full w-full object-cover" />
             ) : (
                 <span
                     className="flex h-full w-full items-center justify-center font-semibold text-vscode-accent"
@@ -101,19 +97,20 @@ export function AvatarUpload({
 
 function CameraIcon() {
     return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-3 w-3"
-        >
+        <svg aria-hidden viewBox="0 0 16 16" fill="none" className="h-3 w-3">
             <path
                 d="M2 5.5A1.5 1.5 0 013.5 4h1l.8-1.2A1 1 0 016.1 2.3h3.8a1 1 0 01.8.5L11.5 4h1A1.5 1.5 0 0114 5.5v6A1.5 1.5 0 0112.5 13h-9A1.5 1.5 0 012 11.5v-6z"
                 stroke="currentColor"
                 strokeWidth="1.25"
                 strokeLinejoin="round"
             />
-            <circle cx="8" cy="8.5" r="2" stroke="currentColor" strokeWidth="1.25" />
+            <circle
+                cx="8"
+                cy="8.5"
+                r="2"
+                stroke="currentColor"
+                strokeWidth="1.25"
+            />
         </svg>
     );
 }

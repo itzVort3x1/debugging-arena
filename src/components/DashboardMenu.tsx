@@ -10,8 +10,18 @@ import { displayName, type DisplayUser } from "@/lib/user";
  * The signed-in user's nav chip, upgraded to a dropdown. Clicking the name
  * opens a menu with a link to the dashboard and the sign-out action. Closes
  * on outside click or Escape.
+ *
+ * `isAdmin` only decides whether the challenge-editor link is worth showing -
+ * /admin gates itself on the server, so hiding the entry grants nothing and
+ * showing it by mistake leaks nothing but a 404.
  */
-export function DashboardMenu({ user }: { user: DisplayUser }) {
+export function DashboardMenu({
+    user,
+    isAdmin = false,
+}: {
+    user: DisplayUser;
+    isAdmin?: boolean;
+}) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const label = displayName(user);
@@ -79,6 +89,17 @@ export function DashboardMenu({ user }: { user: DisplayUser }) {
                             <DashboardIcon />
                             Dashboard
                         </Link>
+                        {isAdmin ? (
+                            <Link
+                                href="/admin/challenges"
+                                role="menuitem"
+                                onClick={() => setOpen(false)}
+                                className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-vscode-fg transition-colors hover:bg-vscode-tab-hover"
+                            >
+                                <EditChallengesIcon />
+                                Edit challenges
+                            </Link>
+                        ) : null}
                         <SignOutButton className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-vscode-fg transition-colors hover:bg-vscode-tab-hover">
                             <SignOutIcon />
                             Sign out
@@ -154,6 +175,32 @@ function DashboardIcon() {
                 rx="1"
                 stroke="currentColor"
                 strokeWidth="1.5"
+            />
+        </svg>
+    );
+}
+
+function EditChallengesIcon() {
+    return (
+        <svg
+            aria-hidden
+            viewBox="0 0 16 16"
+            fill="none"
+            className="h-4 w-4 text-vscode-fg-muted"
+        >
+            <path
+                d="M8.5 13H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v3.5M4.5 5.5h5M4.5 8h3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M13.6 8.9a1.2 1.2 0 0 1 1.7 1.7L12 14l-2 .5.5-2 3.1-3.6z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
             />
         </svg>
     );

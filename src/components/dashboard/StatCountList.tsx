@@ -5,7 +5,7 @@ export interface StatCountItem {
 
 /**
  * A generic "chip + count" list, e.g. LeetCode's Languages panel
- * ("C++ — 346 problems solved"). Presentational and data-agnostic: feed it any
+ * ("C++ - 346 problems solved"). Presentational and data-agnostic: feed it any
  * {label, count}[] and customize the trailing unit. Reusable for tags, skills,
  * tech stacks, etc.
  */
