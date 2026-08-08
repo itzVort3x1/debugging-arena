@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDuration, formatRelativeTime } from "@/lib/format";
-import { runtimeLabel } from "@/lib/runtimes";
+import { isTestFramework, runtimeLabel } from "@/lib/runtimes";
 import { ChevronLeftIcon } from "@/components/ui/icons";
 import { displayName } from "@/lib/user";
 
@@ -88,11 +88,16 @@ export default async function DashboardPage() {
 
     // Tech-stack breakdown across solved challenges (LeetCode's "Languages"
     // panel analog). A challenge can contribute several stack labels.
+    //
+    // Test frameworks are skipped: a challenge tagged ["Python", "pytest"] is
+    // one thing solved in Python, not one in Python and one in pytest. The
+    // label stays on the challenge card, where naming the suite is useful.
     const languageCounts = new Map<string, number>();
     for (const slug of solvedSlugs) {
         const c = metaBySlug.get(slug);
         if (!c) continue;
         for (const tech of c.stack) {
+            if (isTestFramework(tech)) continue;
             languageCounts.set(tech, (languageCounts.get(tech) ?? 0) + 1);
         }
     }
