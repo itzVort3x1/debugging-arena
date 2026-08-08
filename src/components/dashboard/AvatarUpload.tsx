@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { initialsFrom } from "@/components/ui/Avatar";
 import { Uploader } from "@/components/ui/Uploader";
+import { CameraIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
 /** Matches the server-side cap in the avatar route. */
@@ -50,7 +51,14 @@ export function AvatarUpload({
                     "rounded-full border border-vscode-border bg-vscode-accent/20",
                     className,
                 )}
-                overlay={<CameraIcon size={Math.round(size * 0.3)} />}
+                overlay={
+                <span
+                    className="block text-white"
+                    style={{ width: size * 0.3, height: size * 0.3 }}
+                >
+                    <CameraIcon className="h-full w-full" />
+                </span>
+            }
                 onUploaded={(url) => {
                     setError(null);
                     setStoredImage(url);
@@ -94,31 +102,5 @@ export function AvatarUpload({
                 </p>
             ) : null}
         </div>
-    );
-}
-
-function CameraIcon({ size }: { size: number }) {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="text-white"
-            style={{ width: size, height: size }}
-        >
-            <path
-                d="M2 5.5A1.5 1.5 0 013.5 4h1l.8-1.2A1 1 0 016.1 2.3h3.8a1 1 0 01.8.5L11.5 4h1A1.5 1.5 0 0114 5.5v6A1.5 1.5 0 0112.5 13h-9A1.5 1.5 0 012 11.5v-6z"
-                stroke="currentColor"
-                strokeWidth="1.25"
-                strokeLinejoin="round"
-            />
-            <circle
-                cx="8"
-                cy="8.5"
-                r="2"
-                stroke="currentColor"
-                strokeWidth="1.25"
-            />
-        </svg>
     );
 }

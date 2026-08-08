@@ -303,6 +303,221 @@ export function ArrowIcon({ className }: IconProps) {
     );
 }
 
+/** Left-pointing chevron - "back to" navigation links. */
+export function ChevronLeftIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M10 3L5 8l5 5" />
+        </svg>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Account / navigation                                                       */
+/* -------------------------------------------------------------------------- */
+
+/** Four panes - the dashboard link in the account menu. */
+export function DashboardIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className={className}
+            aria-hidden="true"
+        >
+            <rect x="2" y="2" width="5" height="5" rx="1" />
+            <rect x="9" y="2" width="5" height="5" rx="1" />
+            <rect x="2" y="9" width="5" height="5" rx="1" />
+            <rect x="9" y="9" width="5" height="5" rx="1" />
+        </svg>
+    );
+}
+
+/** Document with a pencil - the admin challenge-editor link. */
+export function EditChallengesIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M8.5 13H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v3.5M4.5 5.5h5M4.5 8h3" />
+            <path d="M13.6 8.9a1.2 1.2 0 0 1 1.7 1.7L12 14l-2 .5.5-2 3.1-3.6z" />
+        </svg>
+    );
+}
+
+/** Door with an out-arrow - sign out. */
+export function SignOutIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6" />
+        </svg>
+    );
+}
+
+/** Camera body with a lens - the avatar upload affordance. */
+export function CameraIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.25"
+            strokeLinejoin="round"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M2 5.5A1.5 1.5 0 013.5 4h1l.8-1.2A1 1 0 016.1 2.3h3.8a1 1 0 01.8.5L11.5 4h1A1.5 1.5 0 0114 5.5v6A1.5 1.5 0 0112.5 13h-9A1.5 1.5 0 012 11.5v-6z" />
+            <circle cx="8" cy="8.5" r="2" />
+        </svg>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Marketing / illustrative                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** The product's bug - wordmark glyph in the nav, footer, and 404. */
+export function BugIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M10 4a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3z" strokeLinejoin="round" />
+            <rect x="6" y="8" width="8" height="8" rx="4" />
+            <path
+                d="M3 10h3M14 10h3M3 14h3M14 14h3M10 16v1"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+}
+
+/** Desktop monitor - the "open on a larger screen" notice. */
+export function MonitorIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className={className}
+            aria-hidden="true"
+        >
+            <rect x="2.5" y="4" width="15" height="10" rx="1.5" />
+            <path d="M7 17h6M10 14v3" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+/** Magnifying glass - inspecting/searching. */
+export function MagnifierIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className={className}
+            aria-hidden="true"
+        >
+            <circle cx="7" cy="7" r="4.5" />
+            <path d="M10.5 10.5 14 14" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+/** A single four-point star. See {@link SparklesIcon} for the larger pair. */
+export function SparkIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M8 1.5 9.6 6 14 7.5 9.6 9 8 13.5 6.4 9 2 7.5 6.4 6 8 1.5Z" />
+        </svg>
+    );
+}
+
+/**
+ * A large star with a small companion - the AI postmortem heading. Distinct
+ * from {@link SparkIcon}, which is one star sized for inline use.
+ */
+export function SparklesIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeLinejoin="round"
+            className={className}
+            aria-hidden="true"
+        >
+            <path
+                d="M10 2.5l1.6 4.3 4.3 1.6-4.3 1.6L10 14.3 8.4 10l-4.3-1.6L8.4 6.8 10 2.5z"
+                strokeWidth="1.4"
+            />
+            <path
+                d="M15.5 12.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"
+                strokeWidth="1.2"
+            />
+        </svg>
+    );
+}
+
+/** Stacked layers - "knows this codebase". */
+export function StackIcon({ className }: IconProps) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M8 1.5 14.5 5 8 8.5 1.5 5 8 1.5ZM2 8l6 3.25L14 8M2 11l6 3.25L14 11" />
+        </svg>
+    );
+}
+
 /* -------------------------------------------------------------------------- */
 /* Mascot                                                                     */
 /* -------------------------------------------------------------------------- */

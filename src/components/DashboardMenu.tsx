@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { SignOutButton } from "@/components/SignOutButton";
+import {
+    ChevronDownIcon,
+    DashboardIcon,
+    EditChallengesIcon,
+    SignOutIcon,
+} from "@/components/ui/icons";
 import { displayName, type DisplayUser } from "@/lib/user";
 
 /**
@@ -57,7 +63,11 @@ export function DashboardMenu({
                 <span className="hidden max-w-[160px] truncate text-xs text-vscode-fg sm:inline">
                     {label}
                 </span>
-                <Chevron open={open} />
+                <ChevronDownIcon
+                    className={`h-3 w-3 text-vscode-fg-muted transition-transform ${
+                        open ? "rotate-180" : ""
+                    }`}
+                />
             </button>
 
             {open ? (
@@ -86,7 +96,7 @@ export function DashboardMenu({
                             onClick={() => setOpen(false)}
                             className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-vscode-fg transition-colors hover:bg-vscode-tab-hover"
                         >
-                            <DashboardIcon />
+                            <DashboardIcon className="h-4 w-4 text-vscode-fg-muted" />
                             Dashboard
                         </Link>
                         {isAdmin ? (
@@ -96,131 +106,17 @@ export function DashboardMenu({
                                 onClick={() => setOpen(false)}
                                 className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-vscode-fg transition-colors hover:bg-vscode-tab-hover"
                             >
-                                <EditChallengesIcon />
+                                <EditChallengesIcon className="h-4 w-4 text-vscode-fg-muted" />
                                 Edit challenges
                             </Link>
                         ) : null}
                         <SignOutButton className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-vscode-fg transition-colors hover:bg-vscode-tab-hover">
-                            <SignOutIcon />
+                            <SignOutIcon className="h-4 w-4 text-vscode-fg-muted" />
                             Sign out
                         </SignOutButton>
                     </div>
                 </div>
             ) : null}
         </div>
-    );
-}
-
-function Chevron({ open }: { open: boolean }) {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className={`h-3 w-3 text-vscode-fg-muted transition-transform ${
-                open ? "rotate-180" : ""
-            }`}
-        >
-            <path
-                d="M4 6l4 4 4-4"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}
-
-function DashboardIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-4 w-4 text-vscode-fg-muted"
-        >
-            <rect
-                x="2"
-                y="2"
-                width="5"
-                height="5"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-            />
-            <rect
-                x="9"
-                y="2"
-                width="5"
-                height="5"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-            />
-            <rect
-                x="2"
-                y="9"
-                width="5"
-                height="5"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-            />
-            <rect
-                x="9"
-                y="9"
-                width="5"
-                height="5"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-            />
-        </svg>
-    );
-}
-
-function EditChallengesIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-4 w-4 text-vscode-fg-muted"
-        >
-            <path
-                d="M8.5 13H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v3.5M4.5 5.5h5M4.5 8h3"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <path
-                d="M13.6 8.9a1.2 1.2 0 0 1 1.7 1.7L12 14l-2 .5.5-2 3.1-3.6z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}
-
-function SignOutIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-4 w-4 text-vscode-fg-muted"
-        >
-            <path
-                d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
     );
 }
