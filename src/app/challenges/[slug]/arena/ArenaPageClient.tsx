@@ -9,7 +9,7 @@ import type {
 import { useArenaStore } from "@/store/arena";
 import { useSession } from "@/hooks/useSession";
 import { ArenaLayout } from "@/components/ide/ArenaLayout";
-import { Spinner } from "@/components/ui/Spinner";
+import { ArenaSkeleton } from "@/components/ide/ArenaSkeleton";
 import { Button } from "@/components/ui/Button";
 import { CenteredScreen } from "@/components/ui/CenteredScreen";
 
@@ -83,15 +83,10 @@ export function ArenaPageClient({
     const sessionMatchesCurrent =
         session !== null && session.challengeSlug === challenge.meta.slug;
 
+    // The same skeleton the route's loading.tsx shows, so the handover from the
+    // server wait to this one is invisible rather than a spinner swap.
     if (isLoading || !sessionMatchesCurrent) {
-        return (
-            <CenteredScreen>
-                <div className="flex flex-col items-center gap-3 text-vscode-fg-muted">
-                    <Spinner size="lg" />
-                    <p className="text-sm">Loading {challenge.meta.title}…</p>
-                </div>
-            </CenteredScreen>
-        );
+        return <ArenaSkeleton />;
     }
 
     // The full IDE (two side panels + editor + terminal) needs real width.

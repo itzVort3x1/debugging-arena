@@ -1,13 +1,11 @@
+import { ArenaSkeleton } from "@/components/ide/ArenaSkeleton";
+
+/**
+ * Shown the instant a challenge link is clicked, while the server resolves the
+ * challenge and the user's pinned version. The same skeleton then carries
+ * through the client's session fetch (see ArenaPageClient), so the two waits
+ * read as one.
+ */
 export default function ArenaLoading() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-vscode-bg text-vscode-fg-muted">
-      <div className="flex flex-col items-center gap-3">
-        <span
-          aria-hidden
-          className="h-8 w-8 animate-spin rounded-full border-2 border-vscode-border border-t-vscode-accent"
-        />
-        <p className="text-sm">Loading arena…</p>
-      </div>
-    </div>
-  );
+    return <ArenaSkeleton />;
 }
