@@ -99,6 +99,16 @@ model DebugSession {
   hintsUsed        Int       @default(0)
   attemptsCount    Int       @default(0)
   timeTaken        Int? // seconds
+  // Working time actually spent, banked across visits. `startedAt` is wall
+  // clock and says nothing about effort - a challenge opened on Monday and
+  // finished on Friday is not a five-day session. The arena heartbeats while
+  // its tab is visible; each beat credits the elapsed time since the last one,
+  // capped, so time away from the page is never counted.
+  activeSeconds    Int       @default(0)
+  // Start of the CURRENT visit, re-anchored by every heartbeat. Null before the
+  // first beat. Time between this and now is credited at submit, so a session
+  // submitted mid-visit doesn't lose the final stretch.
+  resumedAt        DateTime?
   score            Int?
   fileState        String    @default("{}") // JSON-encoded Record<filename, content>
 

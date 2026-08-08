@@ -12,6 +12,7 @@ import {
 import { runChallenge } from "@/lib/runner/runChallenge";
 import { RunnerBusyError } from "@/lib/runner/concurrency";
 import { computeScore } from "@/lib/scoring";
+import { totalActiveSeconds } from "@/lib/session-time";
 import { loadSharedReveals, serializeSession } from "@/lib/sessions";
 
 const BodySchema = z.object({
@@ -114,12 +115,9 @@ export const POST = route<RouteContext>(async (req, { params }) => {
     }
 
     const completedAt = new Date();
-    const timeTaken = Math.max(
-        0,
-        Math.round(
-            (completedAt.getTime() - session.startedAt.getTime()) / 1000,
-        ),
-    );
+    // Working time, not wall clock since the row was created: banked heartbeat
+    // credits plus the stretch since the last beat. See lib/session-time.
+    const timeTaken = totalActiveSeconds(session, completedAt);
     const breakdown = computeScore({
         challenge,
         revealedHintLevels: shared.revealedHintLevels,

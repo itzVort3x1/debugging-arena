@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useArenaStore } from "@/store/arena";
 import { useFileEditor } from "@/hooks/useFileEditor";
+import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
 import { CodeEditor } from "./CodeEditor";
 import { TabBar } from "./TabBar";
 import { FileExplorer } from "./FileExplorer";
@@ -35,8 +36,14 @@ type RightPane = (typeof RIGHT_PANES)[number]["id"];
  */
 export function ArenaLayout() {
   const terminalOpen = useArenaStore((s) => s.terminalOpen);
+  const session = useArenaStore((s) => s.session);
   const [rightPane, setRightPane] = useState<RightPane>("problem");
   const editor = useFileEditor();
+
+  // Accrue working time while this tab is open, so elapsed time measures work
+  // rather than how long ago the session row was created. Stops once the
+  // session is submitted - its time is stamped and the route would 409.
+  useSessionHeartbeat(session?.id ?? null, session?.status === "IN_PROGRESS");
 
   // `rightPane` is typed from RIGHT_PANES, so the lookup always hits; the
   // fallback is only there to keep this total without a non-null assertion.

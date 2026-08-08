@@ -1,0 +1,24 @@
+-- Active working time on DebugSession.
+--
+-- `timeTaken` was computed as completedAt - startedAt, i.e. wall clock since
+-- the session row was created. A user who opened a challenge, looked at it, and
+-- came back three days later to finish scored a "20075m" session and ate the
+-- over-the-time-limit penalty for time they never spent working.
+--
+-- `activeSeconds` banks time credited by the arena's heartbeat, which only
+-- beats while the tab is visible and caps each credit, so an absence adds at
+-- most one interval. `resumedAt` anchors the current visit so the stretch
+-- between the last beat and submission still counts.
+--
+-- PURELY ADDITIVE and safe on live data:
+--   - activeSeconds backfills to 0 for existing rows. In-progress sessions
+--     therefore start their accounting from the next heartbeat, which is the
+--     desired behaviour - their true active time was never recorded and cannot
+--     be reconstructed.
+--   - resumedAt is nullable; a session that has never been opened since this
+--     migration simply has no current visit.
+--
+-- Already-SUBMITTED rows keep whatever `timeTaken` they were stamped with. The
+-- old values stay inflated; there is no data from which to correct them.
+ALTER TABLE "DebugSession" ADD COLUMN "activeSeconds" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "DebugSession" ADD COLUMN "resumedAt" TIMESTAMP(3);
