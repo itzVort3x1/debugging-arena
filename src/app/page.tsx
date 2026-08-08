@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAdminUserId } from "@/lib/auth-helpers";
+import { getNavUser } from "@/lib/auth-helpers";
 import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import { TerminalCarousel } from "@/components/TerminalCarousel";
@@ -11,15 +11,23 @@ import { loadBestProgress, type ChallengeProgress } from "@/lib/dashboard";
 interface SessionUser {
     name: string | null;
     email: string | null;
+    image: string | null;
 }
 
 export default async function HomePage() {
     const challenges = await getAllChallengeMeta();
     const session = await getServerSession(authOptions);
+
+    // Role and avatar both come from the database, not the token - one query.
+    // The role here only decides whether the nav offers the admin link;
+    // /admin gates itself.
+    const navUser = session?.user?.id ? await getNavUser() : null;
+
     const user: SessionUser | null = session?.user
         ? {
               name: session.user.name ?? null,
               email: session.user.email ?? null,
+              image: navUser?.image ?? null,
           }
         : null;
 
@@ -27,8 +35,7 @@ export default async function HomePage() {
         ? await loadBestProgress(session.user.id)
         : {};
 
-    // Only to decide whether the nav offers the admin link; /admin gates itself.
-    const isAdmin = session?.user?.id ? !!(await getAdminUserId()) : false;
+    const isAdmin = navUser?.isAdmin ?? false;
 
     return (
         <div className="relative min-h-screen overflow-hidden bg-vscode-bg text-vscode-fg">

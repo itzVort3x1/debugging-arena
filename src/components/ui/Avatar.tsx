@@ -23,26 +23,39 @@ export function initialsFrom(label: string): string {
 
 export interface AvatarProps {
     label: string;
+    /** Stored avatar URL; initials are used when absent. */
+    image?: string | null;
     size?: AvatarSize;
     className?: string;
 }
 
 /**
- * Small circular avatar showing initials derived from a label (name, or email
- * as a fallback). Purely presentational; `size` scales it from the nav chip
- * (`sm`) up to the dashboard identity header (`lg`).
+ * Small circular avatar: the user's uploaded image when they have one, else
+ * initials derived from a label (name, or email as a fallback). Purely
+ * presentational; `size` scales it from the nav chip (`sm`) up to the dashboard
+ * identity header (`lg`).
  */
-export function Avatar({ label, size = "sm", className }: AvatarProps) {
+export function Avatar({
+    label,
+    image = null,
+    size = "sm",
+    className,
+}: AvatarProps) {
     return (
         <span
             aria-hidden
             className={cn(
-                "flex shrink-0 items-center justify-center rounded-full bg-vscode-accent/20 font-semibold text-vscode-accent",
+                "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-vscode-accent/20 font-semibold text-vscode-accent",
                 sizeClasses[size],
                 className,
             )}
         >
-            {initialsFrom(label)}
+            {image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={image} alt="" className="h-full w-full object-cover" />
+            ) : (
+                initialsFrom(label)
+            )}
         </span>
     );
 }

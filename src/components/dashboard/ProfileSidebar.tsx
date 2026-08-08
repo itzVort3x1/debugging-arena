@@ -9,17 +9,20 @@ export function ProfileSidebar({
     label,
     name,
     username,
+    image = null,
     children,
 }: {
     label: string;
     name: string;
     username: string | null;
+    /** Stored avatar URL; initials stand in until one is uploaded. */
+    image?: string | null;
     children?: ReactNode;
 }) {
     return (
         <aside className="flex flex-col gap-5">
             <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:text-left">
-                <AvatarUpload label={label} size={80} />
+                <AvatarUpload label={label} initialImage={image} size={80} />
                 <div className="min-w-0">
                     <h1 className="truncate text-xl font-bold tracking-tight text-vscode-fg">
                         {name}

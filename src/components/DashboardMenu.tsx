@@ -53,7 +53,7 @@ export function DashboardMenu({
                 aria-expanded={open}
                 className="inline-flex items-center gap-2 rounded-md border border-vscode-border bg-vscode-bg-elevated px-3 py-1.5 transition-colors hover:bg-vscode-tab-hover"
             >
-                <Avatar label={label} />
+                <Avatar label={label} image={user.image} />
                 <span className="hidden max-w-[160px] truncate text-xs text-vscode-fg sm:inline">
                     {label}
                 </span>
@@ -66,7 +66,7 @@ export function DashboardMenu({
                     className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-md border border-vscode-border bg-vscode-bg-elevated shadow-lg shadow-black/20"
                 >
                     <div className="flex items-center gap-2.5 border-b border-vscode-border px-3 py-2.5">
-                        <Avatar label={label} size="md" />
+                        <Avatar label={label} image={user.image} size="md" />
                         <div className="min-w-0">
                             <div className="truncate text-sm font-medium text-vscode-fg">
                                 {user.name ?? user.email ?? "Account"}

@@ -54,6 +54,10 @@ and a persistent disk - Render, Railway, Fly.io, a container, or a plain VPS.
   by `prisma migrate`.
 - `NEXTAUTH_URL` - your public origin, e.g. `https://arena.example.com`.
 - `NEXTAUTH_SECRET` - required.
+- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` - optional; avatar uploads. Needs
+  a **public** Supabase Storage bucket named `avatars` (override with
+  `SUPABASE_AVATAR_BUCKET`). Unset means `POST /api/profile/avatar` answers 503
+  and users keep their initials. The service-role key is server-side only.
 - `ANTHROPIC_API_KEY` - optional; only used by the AI postmortem (not shipped yet).
 
 **Build & run:**

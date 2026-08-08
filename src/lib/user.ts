@@ -2,6 +2,8 @@
 export interface DisplayUser {
     name: string | null;
     email: string | null;
+    /** Stored avatar URL, if one has been uploaded. */
+    image?: string | null;
 }
 
 /**

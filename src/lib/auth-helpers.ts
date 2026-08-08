@@ -38,3 +38,27 @@ export async function getAdminUserId(): Promise<string | null> {
   });
   return user?.role === ADMIN_ROLE ? userId : null;
 }
+
+/**
+ * What the nav needs about the current user, in one query: whether to offer the
+ * admin link, and which avatar to draw.
+ *
+ * Both are read from the database rather than the JWT for the same reason - a
+ * token minted before a promotion or an avatar upload would keep serving the
+ * stale value until it expired.
+ */
+export async function getNavUser(): Promise<{
+  isAdmin: boolean;
+  image: string | null;
+} | null> {
+  const userId = await getSessionUserId();
+  if (!userId) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, image: true },
+  });
+  if (!user) return null;
+
+  return { isAdmin: user.role === ADMIN_ROLE, image: user.image };
+}

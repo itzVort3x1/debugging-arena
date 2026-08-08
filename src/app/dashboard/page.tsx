@@ -38,7 +38,12 @@ export default async function DashboardPage() {
     const [user, data, activity] = await Promise.all([
         prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { name: true, email: true, createdAt: true },
+            select: {
+                name: true,
+                email: true,
+                image: true,
+                createdAt: true,
+            },
         }),
         loadDashboard(session.user.id),
         loadActivityCalendar(session.user.id),
@@ -107,6 +112,7 @@ export default async function DashboardPage() {
                         label={label}
                         name={headerName}
                         username={username}
+                        image={user?.image ?? null}
                     >
                         <SidebarSection title="Languages">
                             <StatCountList
