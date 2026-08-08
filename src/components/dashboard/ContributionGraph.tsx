@@ -18,6 +18,11 @@ const MONTHS = [
 const CELL = 12; // px, square size
 const GAP = 3; // px, gap between squares
 
+// A month label is only drawn when its run of weeks is wide enough to hold it.
+// Narrower runs (the partial months at either end) stay blank rather than being
+// clipped mid-word.
+const MIN_LABEL_WEEKS = 3;
+
 // Green tints of vscode.success (#4ec9b0). Index 0 is the empty-day cell.
 const LEVEL_BG = [
     "rgba(120,120,120,0.12)",
@@ -102,16 +107,24 @@ export function ContributionGraph({
         columns.push(cells.slice(i, i + 7));
     }
 
-    // A month label sits above the first column of each new month.
-    let prevMonth = -1;
-    const monthLabels = columns.map((week) => {
-        const m = week[0].date.getMonth();
-        if (m !== prevMonth) {
-            prevMonth = m;
-            return MONTHS[m];
+    // Month labels span every column belonging to that month instead of sitting
+    // in a single 12px cell. A one-cell label has to overflow to be readable,
+    // and that overflow counts toward the scroll container's width - which is
+    // what put a scrollbar under a graph that otherwise fits.
+    const monthRuns: { month: number; span: number; key: string }[] = [];
+    for (const week of columns) {
+        const month = week[0].date.getMonth();
+        const prev = monthRuns[monthRuns.length - 1];
+        if (prev && prev.month === month) {
+            prev.span += 1;
+        } else {
+            monthRuns.push({
+                month,
+                span: 1,
+                key: `${week[0].date.getFullYear()}-${month}`,
+            });
         }
-        return "";
-    });
+    }
 
     const sum = total ?? Object.values(counts).reduce((a, b) => a + b, 0);
 
@@ -129,7 +142,7 @@ export function ContributionGraph({
                 </span>
             </div>
 
-            <div className="overflow-x-auto pb-1">
+            <div className="scrollbar-slim overflow-x-auto pb-1">
                 <div className="inline-block">
                     <div
                         className="mb-1 grid text-[10px] text-vscode-fg-subtle"
@@ -138,12 +151,15 @@ export function ContributionGraph({
                             gap: `${GAP}px`,
                         }}
                     >
-                        {monthLabels.map((label, i) => (
+                        {monthRuns.map((run) => (
                             <div
-                                key={i}
-                                className="overflow-visible whitespace-nowrap"
+                                key={run.key}
+                                className="overflow-hidden whitespace-nowrap"
+                                style={{ gridColumn: `span ${run.span}` }}
                             >
-                                {label}
+                                {run.span >= MIN_LABEL_WEEKS
+                                    ? MONTHS[run.month]
+                                    : ""}
                             </div>
                         ))}
                     </div>
