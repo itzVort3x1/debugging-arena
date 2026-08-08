@@ -6,6 +6,7 @@ import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import { TerminalCarousel } from "@/components/TerminalCarousel";
 import { DashboardMenu } from "@/components/DashboardMenu";
+import { BugsyMascot } from "@/components/ui/icons";
 import { loadBestProgress, type ChallengeProgress } from "@/lib/dashboard";
 
 interface SessionUser {
@@ -62,6 +63,7 @@ export default async function HomePage() {
                     authed={!!user}
                     progress={progress}
                 />
+                <BugsyTeaser />
                 {!user && <ComparisonStrip />}
                 {!user && <FinalCTA />}
                 <Footer />
@@ -439,6 +441,88 @@ function DifficultyBadge({ level }: { level: Difficulty }) {
         >
             {level}
         </span>
+    );
+}
+
+// ---------------------- bugsy teaser ----------------------
+
+/**
+ * Trails the AI assistant that ships into the arena's right rail later.
+ *
+ * The sample exchange is doing the real work here: it shows Bugsy answering a
+ * question with a better question, which is the whole point of the feature and
+ * the reason it doesn't undercut the hint penalties. Shown to signed-in and
+ * signed-out visitors alike - it's news either way.
+ */
+function BugsyTeaser() {
+    return (
+        <section className="my-12 overflow-hidden rounded-2xl border border-vscode-border bg-gradient-to-br from-vscode-bg-elevated to-vscode-panel p-8 md:p-12">
+            <div className="grid items-center gap-10 lg:grid-cols-[1fr_1fr]">
+                <div>
+                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-vscode-accent/30 bg-vscode-accent/10 px-3 py-1 text-xs font-medium text-vscode-accent">
+                        <span className="h-2 w-2 rounded-full bg-vscode-accent" />
+                        Coming soon
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="relative shrink-0">
+                            <span
+                                aria-hidden
+                                className="absolute inset-0 rounded-full bg-vscode-accent/25 blur-xl"
+                            />
+                            <BugsyMascot className="relative h-14 w-14 text-vscode-accent" />
+                        </div>
+                        <h2 className="text-3xl font-bold tracking-tight text-vscode-fg sm:text-4xl">
+                            Meet{" "}
+                            <span className="text-vscode-accent">Bugsy</span>
+                        </h2>
+                    </div>
+
+                    <p className="mt-5 max-w-xl text-base leading-relaxed text-vscode-fg-muted">
+                        An AI companion living right beside the Problem and
+                        Hints tabs in the arena. Bugsy reads the failing test
+                        with you and asks the next useful question - it
+                        won&apos;t hand you the answer, because finding it is
+                        the part that makes you better.
+                    </p>
+
+                    <ul className="mt-6 space-y-2 text-sm text-vscode-fg-muted">
+                        <li className="flex items-start gap-2">
+                            <CheckSmIcon /> Walks back from the broken assertion
+                            to the line that caused it
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <CheckSmIcon /> Knows the files you have open, not
+                            generic advice
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <CheckSmIcon /> Nudges instead of answering, so the
+                            fix - and the score - stay yours
+                        </li>
+                    </ul>
+                </div>
+
+                <div className="rounded-xl border border-vscode-border bg-vscode-bg/60 p-5">
+                    <div className="space-y-3">
+                        <div className="flex justify-end">
+                            <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-vscode-accent/15 px-4 py-2.5 text-sm text-vscode-fg">
+                                Why does the retry test hang forever?
+                            </p>
+                        </div>
+                        <div className="flex items-end gap-2">
+                            <BugsyMascot className="mb-1 h-6 w-6 shrink-0 text-vscode-accent" />
+                            <p className="max-w-[85%] rounded-2xl rounded-bl-sm border border-vscode-border bg-vscode-bg-elevated px-4 py-2.5 text-sm leading-relaxed text-vscode-fg-muted">
+                                Look at what happens to the timer when the
+                                promise rejects - is anything clearing it?
+                            </p>
+                        </div>
+                    </div>
+                    <p className="mt-5 border-t border-vscode-border-subtle pt-4 text-center text-xs text-vscode-fg-subtle">
+                        A preview of what Bugsy will feel like. Not live yet.
+                    </p>
+                </div>
+            </div>
+        </section>
     );
 }
 

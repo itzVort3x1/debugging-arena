@@ -302,3 +302,62 @@ export function ArrowIcon({ className }: IconProps) {
         </svg>
     );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Mascot                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Bugsy: a rounded beetle with antennae and a friendly pair of eyes.
+ *
+ * Not a UI glyph like the rest of this module, but it is drawn in both the
+ * arena's Bugsy panel and the marketing page, and one 40-line SVG in two places
+ * drifts. Uses a 48-unit box rather than the 16/20 the glyphs use - it carries
+ * detail they don't.
+ */
+export function BugsyMascot({ className }: IconProps) {
+    return (
+        <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
+            {/* antennae */}
+            <path
+                d="M18 13c-1.5-3-3.5-4.5-6-5M30 13c1.5-3 3.5-4.5 6-5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+            />
+            <circle cx="11.5" cy="7.5" r="2" fill="currentColor" />
+            <circle cx="36.5" cy="7.5" r="2" fill="currentColor" />
+
+            {/* legs */}
+            <path
+                d="M13 24H6M13 31l-6 4M13 18l-6-4M35 24h7M35 31l6 4M35 18l6-4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+            />
+
+            {/* shell */}
+            <rect
+                x="13"
+                y="12"
+                width="22"
+                height="28"
+                rx="11"
+                fill="currentColor"
+                fillOpacity="0.18"
+                stroke="currentColor"
+                strokeWidth="2"
+            />
+            <path
+                d="M24 12v28"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeOpacity="0.5"
+            />
+
+            {/* eyes */}
+            <circle cx="20" cy="21" r="1.75" fill="currentColor" />
+            <circle cx="28" cy="21" r="1.75" fill="currentColor" />
+        </svg>
+    );
+}

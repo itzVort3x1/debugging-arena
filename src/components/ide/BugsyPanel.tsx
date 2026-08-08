@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { PanelHeader } from "@/components/ui/PanelHeader";
+import { BugsyMascot } from "@/components/ui/icons";
 
 /**
  * Placeholder for Bugsy, the in-arena AI assistant.
@@ -109,58 +110,6 @@ const CAPABILITIES = [
         icon: <StackIcon className="h-3.5 w-3.5" />,
     },
 ];
-
-/**
- * Bugsy himself: a rounded beetle with antennae and a friendly pair of eyes.
- * Local to this panel rather than the shared icon set - it's a mascot, not a
- * UI glyph.
- */
-function BugsyMascot({ className }: { className?: string }) {
-    return (
-        <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
-            {/* antennae */}
-            <path
-                d="M18 13c-1.5-3-3.5-4.5-6-5M30 13c1.5-3 3.5-4.5 6-5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-            />
-            <circle cx="11.5" cy="7.5" r="2" fill="currentColor" />
-            <circle cx="36.5" cy="7.5" r="2" fill="currentColor" />
-
-            {/* legs */}
-            <path
-                d="M13 24H6M13 31l-6 4M13 18l-6-4M35 24h7M35 31l6 4M35 18l6-4"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-            />
-
-            {/* shell */}
-            <rect
-                x="13"
-                y="12"
-                width="22"
-                height="28"
-                rx="11"
-                fill="currentColor"
-                fillOpacity="0.18"
-                stroke="currentColor"
-                strokeWidth="2"
-            />
-            <path
-                d="M24 12v28"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeOpacity="0.5"
-            />
-
-            {/* eyes */}
-            <circle cx="20" cy="21" r="1.75" fill="currentColor" />
-            <circle cx="28" cy="21" r="1.75" fill="currentColor" />
-        </svg>
-    );
-}
 
 function MagnifierIcon({ className }: { className?: string }) {
     return (
