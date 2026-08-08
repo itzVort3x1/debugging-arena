@@ -1,3 +1,4 @@
+import { BugIcon } from "@/components/ui/icons";
 import Link from "next/link";
 
 export const metadata = { title: "Not found" };
@@ -11,34 +12,7 @@ export default function NotFound() {
             />
             <div className="relative flex max-w-md flex-col items-center text-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-vscode-border bg-vscode-bg-elevated text-vscode-error">
-                    <svg
-                        aria-hidden
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        className="h-7 w-7"
-                    >
-                        <path
-                            d="M10 4a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinejoin="round"
-                        />
-                        <rect
-                            x="6"
-                            y="8"
-                            width="8"
-                            height="8"
-                            rx="4"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                        />
-                        <path
-                            d="M3 10h3M14 10h3M3 14h3M14 14h3M10 16v1"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                        />
-                    </svg>
+                    <BugIcon className="h-7 w-7" />
                 </div>
 
                 <p className="mt-6 font-mono text-sm text-vscode-error">404</p>

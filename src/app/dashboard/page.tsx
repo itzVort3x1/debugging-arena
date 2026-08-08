@@ -22,6 +22,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDuration, formatRelativeTime } from "@/lib/format";
 import { runtimeLabel } from "@/lib/runtimes";
+import { ChevronLeftIcon } from "@/components/ui/icons";
 import { displayName } from "@/lib/user";
 
 export const metadata: Metadata = {
@@ -170,7 +171,7 @@ function TopBar() {
                 href="/"
                 className="inline-flex items-center gap-1.5 text-sm text-vscode-fg-muted transition-colors hover:text-vscode-fg"
             >
-                <BackArrow />
+                <ChevronLeftIcon className="h-3.5 w-3.5" />
                 Back to home
             </Link>
         </div>
@@ -407,21 +408,3 @@ function RunBadge({
     );
 }
 
-function BackArrow() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-3.5 w-3.5"
-        >
-            <path
-                d="M10 3L5 8l5 5"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}

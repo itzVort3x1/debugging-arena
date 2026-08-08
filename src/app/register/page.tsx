@@ -1,3 +1,4 @@
+import { CheckIcon } from "@/components/ui/icons";
 import Link from "next/link";
 import RegisterForm from "./RegisterForm";
 
@@ -40,7 +41,7 @@ export default function RegisterPage() {
                     {/* Feature bullets */}
                     <ul className="mt-8 space-y-3 text-sm">
                         <li className="flex items-start gap-3">
-                            <CheckIcon />
+                            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" />
                             <span>
                                 <span className="text-vscode-fg">
                                     Curated challenges
@@ -53,7 +54,7 @@ export default function RegisterPage() {
                             </span>
                         </li>
                         <li className="flex items-start gap-3">
-                            <CheckIcon />
+                            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" />
                             <span>
                                 <span className="text-vscode-fg">
                                     Real test suites
@@ -65,7 +66,7 @@ export default function RegisterPage() {
                             </span>
                         </li>
                         <li className="flex items-start gap-3">
-                            <CheckIcon />
+                            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" />
                             <span>
                                 <span className="text-vscode-fg">
                                     AI postmortems
@@ -133,24 +134,5 @@ export default function RegisterPage() {
                 </section>
             </div>
         </div>
-    );
-}
-
-function CheckIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 20 20"
-            fill="none"
-            className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success"
-        >
-            <path
-                d="M4 10.5l3.5 3.5L16 6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
     );
 }

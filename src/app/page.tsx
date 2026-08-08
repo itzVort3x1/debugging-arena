@@ -6,7 +6,13 @@ import { getAllChallengeMeta } from "@/lib/challenges/registry";
 import type { ChallengeMeta, Difficulty } from "@/types/challenge";
 import { TerminalCarousel } from "@/components/TerminalCarousel";
 import { DashboardMenu } from "@/components/DashboardMenu";
-import { BugsyMascot } from "@/components/ui/icons";
+import {
+    ArrowIcon,
+    BugIcon,
+    BugsyMascot,
+    CheckIcon,
+    CloseIcon,
+} from "@/components/ui/icons";
 import { loadBestProgress, type ChallengeProgress } from "@/lib/dashboard";
 
 interface SessionUser {
@@ -87,7 +93,7 @@ function TopNav({
                 href="/"
                 className="flex items-center gap-2 text-sm font-semibold text-vscode-fg"
             >
-                <BugIcon />
+                <BugIcon className="h-4 w-4 text-vscode-accent" />
                 Debugging Arena
             </Link>
             <nav className="flex items-center gap-2 text-sm">
@@ -115,7 +121,7 @@ function AnonNav() {
                 className="group relative inline-flex items-center gap-1.5 rounded-md bg-vscode-accent px-4 py-1.5 text-sm font-semibold text-white shadow-md shadow-vscode-accent/30 ring-1 ring-inset ring-white/10 transition-all hover:bg-vscode-accent-hover hover:shadow-lg hover:shadow-vscode-accent/50"
             >
                 Get started
-                <NavArrowIcon />
+                <ArrowIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </Link>
         </>
     );
@@ -138,25 +144,6 @@ function AuthedNav({
             </Link>
             <DashboardMenu user={user} isAdmin={isAdmin} />
         </>
-    );
-}
-
-function NavArrowIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-        >
-            <path
-                d="M3 8h9m0 0l-3-3m3 3l-3 3"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
     );
 }
 
@@ -215,7 +202,7 @@ function Hero({ user }: { user: SessionUser | null }) {
                             className="group inline-flex items-center gap-2 rounded-md bg-vscode-accent px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-vscode-accent/20 transition-all hover:bg-vscode-accent-hover hover:shadow-vscode-accent/40"
                         >
                             Pick a challenge
-                            <ArrowIcon />
+                            <ArrowIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                         </Link>
                     ) : (
                         <>
@@ -224,7 +211,7 @@ function Hero({ user }: { user: SessionUser | null }) {
                                 className="group inline-flex items-center gap-2 rounded-md bg-vscode-accent px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-vscode-accent/20 transition-all hover:bg-vscode-accent-hover hover:shadow-vscode-accent/40"
                             >
                                 Start debugging - it&apos;s free
-                                <ArrowIcon />
+                                <ArrowIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                             </Link>
                             <Link
                                 href="/login"
@@ -400,20 +387,7 @@ function ProgressBadge({ progress }: { progress: ChallengeProgress }) {
     if (progress.status === "SUBMITTED") {
         return (
             <span className="inline-flex items-center gap-1 rounded-full border border-vscode-success/30 bg-vscode-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vscode-success">
-                <svg
-                    aria-hidden
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    className="h-3 w-3"
-                >
-                    <path
-                        d="M4 10.5l3.5 3.5L16 6"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </svg>
+                <CheckIcon className="h-3 w-3" />
                 Solved
                 {typeof progress.score === "number"
                     ? ` · ${progress.score}`
@@ -488,15 +462,15 @@ function BugsyTeaser() {
 
                     <ul className="mt-6 space-y-2 text-sm text-vscode-fg-muted">
                         <li className="flex items-start gap-2">
-                            <CheckSmIcon /> Walks back from the broken assertion
+                            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" /> Walks back from the broken assertion
                             to the line that caused it
                         </li>
                         <li className="flex items-start gap-2">
-                            <CheckSmIcon /> Knows the files you have open, not
+                            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" /> Knows the files you have open, not
                             generic advice
                         </li>
                         <li className="flex items-start gap-2">
-                            <CheckSmIcon /> Nudges instead of answering, so the
+                            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" /> Nudges instead of answering, so the
                             fix - and the score - stay yours
                         </li>
                     </ul>
@@ -537,13 +511,13 @@ function ComparisonStrip() {
                 </p>
                 <ul className="space-y-2 text-sm text-vscode-fg-muted">
                     <li className="flex items-start gap-2">
-                        <CrossIcon /> Solve a contrived puzzle in 30 minutes
+                        <CloseIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-fg-subtle" /> Solve a contrived puzzle in 30 minutes
                     </li>
                     <li className="flex items-start gap-2">
-                        <CrossIcon /> Memorize patterns you&apos;ll never use
+                        <CloseIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-fg-subtle" /> Memorize patterns you&apos;ll never use
                     </li>
                     <li className="flex items-start gap-2">
-                        <CrossIcon /> Zero overlap with what senior engineers
+                        <CloseIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-fg-subtle" /> Zero overlap with what senior engineers
                         actually do
                     </li>
                 </ul>
@@ -554,14 +528,14 @@ function ComparisonStrip() {
                 </p>
                 <ul className="space-y-2 text-sm text-vscode-fg">
                     <li className="flex items-start gap-2">
-                        <CheckSmIcon /> Read code you didn&apos;t write
+                        <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" /> Read code you didn&apos;t write
                     </li>
                     <li className="flex items-start gap-2">
-                        <CheckSmIcon /> Reproduce a real failure from a real
+                        <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" /> Reproduce a real failure from a real
                         test
                     </li>
                     <li className="flex items-start gap-2">
-                        <CheckSmIcon /> Practice the thing you do every single
+                        <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success" /> Practice the thing you do every single
                         day at work
                     </li>
                 </ul>
@@ -587,7 +561,7 @@ function FinalCTA() {
                 className="mt-8 inline-flex items-center gap-2 rounded-md bg-vscode-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-vscode-accent/30 transition-all hover:bg-vscode-accent-hover hover:shadow-vscode-accent/50"
             >
                 Create your account
-                <ArrowIcon />
+                <ArrowIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
         </section>
     );
@@ -597,7 +571,7 @@ function Footer() {
     return (
         <footer className="flex flex-col items-center justify-between gap-4 border-t border-vscode-border py-8 text-xs text-vscode-fg-subtle md:flex-row">
             <div className="flex items-center gap-2">
-                <BugIcon />
+                <BugIcon className="h-4 w-4 text-vscode-accent" />
                 Debugging Arena
             </div>
             <div>Built to make you a better engineer, one bug at a time.</div>
@@ -605,93 +579,3 @@ function Footer() {
     );
 }
 
-// ---------------------- icons ----------------------
-
-function BugIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 20 20"
-            fill="none"
-            className="h-4 w-4 text-vscode-accent"
-        >
-            <path
-                d="M10 4a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-            />
-            <rect
-                x="6"
-                y="8"
-                width="8"
-                height="8"
-                rx="4"
-                stroke="currentColor"
-                strokeWidth="1.5"
-            />
-            <path
-                d="M3 10h3M14 10h3M3 14h3M14 14h3M10 16v1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-            />
-        </svg>
-    );
-}
-
-function ArrowIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 20 20"
-            fill="none"
-            className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-        >
-            <path
-                d="M4 10h12m0 0l-4-4m4 4l-4 4"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}
-
-function CheckSmIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 20 20"
-            fill="none"
-            className="mt-0.5 h-4 w-4 shrink-0 text-vscode-success"
-        >
-            <path
-                d="M4 10.5l3.5 3.5L16 6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}
-
-function CrossIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 20 20"
-            fill="none"
-            className="mt-0.5 h-4 w-4 shrink-0 text-vscode-fg-subtle"
-        >
-            <path
-                d="M5 5l10 10M15 5L5 15"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-            />
-        </svg>
-    );
-}

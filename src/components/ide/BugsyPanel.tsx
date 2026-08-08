@@ -1,7 +1,13 @@
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { PanelHeader } from "@/components/ui/PanelHeader";
-import { BugsyMascot } from "@/components/ui/icons";
+import {
+    ArrowIcon,
+    BugsyMascot,
+    MagnifierIcon,
+    SparkIcon,
+    StackIcon,
+} from "@/components/ui/icons";
 
 /**
  * Placeholder for Bugsy, the in-arena AI assistant.
@@ -79,7 +85,7 @@ export function BugsyPanel() {
                             Ask Bugsy why this test fails...
                         </span>
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-vscode-accent/20 text-vscode-accent">
-                            <SendIcon className="h-3.5 w-3.5" />
+                            <ArrowIcon className="h-3.5 w-3.5" />
                         </span>
                     </div>
                     <p className="text-center text-[11px] text-vscode-fg-subtle">
@@ -110,83 +116,3 @@ const CAPABILITIES = [
         icon: <StackIcon className="h-3.5 w-3.5" />,
     },
 ];
-
-function MagnifierIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            className={className}
-            aria-hidden="true"
-        >
-            <circle
-                cx="7"
-                cy="7"
-                r="4.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-            />
-            <path
-                d="M10.5 10.5 14 14"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-            />
-        </svg>
-    );
-}
-
-function SparkIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            className={className}
-            aria-hidden="true"
-        >
-            <path
-                d="M8 1.5 9.6 6 14 7.5 9.6 9 8 13.5 6.4 9 2 7.5 6.4 6 8 1.5Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}
-
-function StackIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            className={className}
-            aria-hidden="true"
-        >
-            <path
-                d="M8 1.5 14.5 5 8 8.5 1.5 5 8 1.5ZM2 8l6 3.25L14 8M2 11l6 3.25L14 11"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}
-
-function SendIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            className={className}
-            aria-hidden="true"
-        >
-            <path
-                d="M2 8h10M8 4l4 4-4 4"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}

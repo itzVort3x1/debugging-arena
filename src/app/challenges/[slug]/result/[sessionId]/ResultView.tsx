@@ -1,3 +1,4 @@
+import { CheckIcon, SparklesIcon } from "@/components/ui/icons";
 import Link from "next/link";
 import type { ClientChallengeDefinition } from "../../../../../../challenges/_schema";
 import type { DebugSessionResponse } from "@/types/session";
@@ -101,7 +102,7 @@ export function ResultView({ challenge, session, breakdown }: ResultViewProps) {
 
                 <div className="mt-8 flex flex-col items-center text-center">
                     <div className="inline-flex items-center gap-2 rounded-full border border-vscode-success/30 bg-vscode-success/10 px-3 py-1 text-xs font-medium text-vscode-success">
-                        <CheckIcon />
+                        <CheckIcon className="h-3.5 w-3.5" />
                         Solved &amp; submitted
                     </div>
 
@@ -192,7 +193,7 @@ export function ResultView({ challenge, session, breakdown }: ResultViewProps) {
                 <div className="mt-6 rounded-xl border border-dashed border-vscode-border bg-vscode-bg-elevated/20 p-6">
                     <div className="flex items-start gap-4">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-vscode-border bg-vscode-bg-elevated text-vscode-accent">
-                            <SparkIcon />
+                            <SparklesIcon className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -229,43 +230,5 @@ export function ResultView({ challenge, session, breakdown }: ResultViewProps) {
                 </div>
             </div>
         </div>
-    );
-}
-
-function CheckIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 20 20"
-            fill="none"
-            className="h-3.5 w-3.5"
-        >
-            <path
-                d="M4 10.5l3.5 3.5L16 6"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}
-
-function SparkIcon() {
-    return (
-        <svg aria-hidden viewBox="0 0 20 20" fill="none" className="h-5 w-5">
-            <path
-                d="M10 2.5l1.6 4.3 4.3 1.6-4.3 1.6L10 14.3 8.4 10l-4.3-1.6L8.4 6.8 10 2.5z"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-            />
-            <path
-                d="M15.5 12.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinejoin="round"
-            />
-        </svg>
     );
 }

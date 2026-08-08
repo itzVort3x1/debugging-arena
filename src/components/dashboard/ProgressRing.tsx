@@ -1,3 +1,4 @@
+import { CheckIcon } from "@/components/ui/icons";
 import type { Difficulty } from "@/types/challenge";
 
 /** Solved / total counts for a single difficulty tier. */
@@ -106,7 +107,7 @@ export function ProgressRing({
                         </span>
                     </div>
                     <div className="mt-1 flex items-center gap-1 text-sm font-medium text-vscode-success">
-                        <CheckIcon />
+                        <CheckIcon className="h-3.5 w-3.5" />
                         Solved
                     </div>
                     {attempting > 0 ? (
@@ -139,24 +140,5 @@ export function ProgressRing({
                 })}
             </div>
         </div>
-    );
-}
-
-function CheckIcon() {
-    return (
-        <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-3.5 w-3.5"
-        >
-            <path
-                d="M3.5 8.5l3 3 6-7"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
     );
 }
