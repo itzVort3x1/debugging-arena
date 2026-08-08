@@ -8,13 +8,25 @@ import { TabBar } from "./TabBar";
 import { FileExplorer } from "./FileExplorer";
 import { ProblemPanel } from "./ProblemPanel";
 import { HintPanel } from "./HintPanel";
+import { BugsyPanel } from "./BugsyPanel";
 import { TopBar } from "./TopBar";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { TerminalDock } from "./TerminalDock";
 import { StatusBar } from "./StatusBar";
 import { cn } from "@/lib/utils";
 
-type RightPane = "problem" | "hints";
+/**
+ * The right rail's tabs, in display order. This is the single source of truth:
+ * both the tab strip and the pane below it are derived from it, so adding a
+ * pane means adding a row here and nothing else.
+ */
+const RIGHT_PANES = [
+  { id: "problem", label: "Problem", Panel: ProblemPanel, comingSoon: false },
+  { id: "hints", label: "Hints", Panel: HintPanel, comingSoon: false },
+  { id: "bugsy", label: "Bugsy", Panel: BugsyPanel, comingSoon: true },
+] as const;
+
+type RightPane = (typeof RIGHT_PANES)[number]["id"];
 
 /**
  * The real arena layout. Assumes the store has already been hydrated by
@@ -25,6 +37,11 @@ export function ArenaLayout() {
   const terminalOpen = useArenaStore((s) => s.terminalOpen);
   const [rightPane, setRightPane] = useState<RightPane>("problem");
   const editor = useFileEditor();
+
+  // `rightPane` is typed from RIGHT_PANES, so the lookup always hits; the
+  // fallback is only there to keep this total without a non-null assertion.
+  const ActivePanel =
+    RIGHT_PANES.find((p) => p.id === rightPane)?.Panel ?? RIGHT_PANES[0].Panel;
 
   return (
     <div className="flex h-screen flex-col bg-vscode-bg text-vscode-fg">
@@ -57,21 +74,26 @@ export function ArenaLayout() {
 
         <aside className="flex w-96 shrink-0 flex-col border-l border-vscode-border">
           <div className="flex h-9 shrink-0 items-stretch border-b border-vscode-border bg-vscode-bg-elevated">
-            <PaneTab
-              active={rightPane === "problem"}
-              onClick={() => setRightPane("problem")}
-            >
-              Problem
-            </PaneTab>
-            <PaneTab
-              active={rightPane === "hints"}
-              onClick={() => setRightPane("hints")}
-            >
-              Hints
-            </PaneTab>
+            {RIGHT_PANES.map((pane) => (
+              <PaneTab
+                key={pane.id}
+                active={rightPane === pane.id}
+                onClick={() => setRightPane(pane.id)}
+              >
+                {pane.label}
+                {/* Marks a tab as not-yet-real without spending width on a
+                    "soon" label in a 384px rail. */}
+                {pane.comingSoon ? (
+                  <span
+                    aria-label="coming soon"
+                    className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-vscode-accent align-middle"
+                  />
+                ) : null}
+              </PaneTab>
+            ))}
           </div>
           <div className="flex-1 overflow-hidden">
-            {rightPane === "problem" ? <ProblemPanel /> : <HintPanel />}
+            <ActivePanel />
           </div>
         </aside>
       </div>
