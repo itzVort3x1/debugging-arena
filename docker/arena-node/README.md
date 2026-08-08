@@ -25,12 +25,12 @@ docker run --rm --network=none --cap-drop=ALL --security-opt=no-new-privileges \
   arena-node node /opt/arena/node_modules/jest/bin/jest.js ...
 ```
 
-- **`/work`** — the materialized sandbox (user files + read-only tests +
+- **`/work`** - the materialized sandbox (user files + read-only tests +
   generated `jest.config.js`/`tsconfig.json`), bind-mounted from a host temp
   dir. Jest writes `.jest-result.json` here; the host reads it back for scoring.
-- **`/cache`** — a named volume (`arena-node-cache`) holding ts-jest's compiled
+- **`/cache`** - a named volume (`arena-node-cache`) holding ts-jest's compiled
   output, persisted across runs so suites don't recompile every time.
-- The **host environment is not forwarded** — no `--env`/`process.env` leak.
+- The **host environment is not forwarded** - no `--env`/`process.env` leak.
 
 ## Local dev without Docker
 

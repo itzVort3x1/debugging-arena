@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * A small "Coming soon" placeholder pill for features that are stubbed in the
- * UI but not yet implemented. Presentational and generic — drop it into any
+ * UI but not yet implemented. Presentational and generic - drop it into any
  * card whose feature isn't wired up yet.
  */
 export function ComingSoon({ className }: { className?: string }) {

@@ -1,8 +1,18 @@
 import { dayKey } from "@/lib/activity";
 
 const MONTHS = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
 ];
 
 const CELL = 12; // px, square size
@@ -49,7 +59,7 @@ export interface ContributionGraphProps {
 /**
  * GitHub-style contribution heatmap: one square per day, coloured by activity
  * level, laid out in week columns (Sunday → Saturday top-to-bottom). Purely
- * presentational and data-agnostic — feed it any date→count map.
+ * presentational and data-agnostic - feed it any date→count map.
  */
 export function ContributionGraph({
     counts,
@@ -103,9 +113,7 @@ export function ContributionGraph({
         return "";
     });
 
-    const sum =
-        total ??
-        Object.values(counts).reduce((a, b) => a + b, 0);
+    const sum = total ?? Object.values(counts).reduce((a, b) => a + b, 0);
 
     const gridCols = `repeat(${columns.length}, ${CELL}px)`;
 
@@ -125,7 +133,10 @@ export function ContributionGraph({
                 <div className="inline-block">
                     <div
                         className="mb-1 grid text-[10px] text-vscode-fg-subtle"
-                        style={{ gridTemplateColumns: gridCols, gap: `${GAP}px` }}
+                        style={{
+                            gridTemplateColumns: gridCols,
+                            gap: `${GAP}px`,
+                        }}
                     >
                         {monthLabels.map((label, i) => (
                             <div

@@ -34,7 +34,7 @@ export function parseJUnitCounts(xml: string): TestCounts {
         total: tests,
         failed,
         // Skipped tests are neither passed nor failed, but still count toward
-        // the total — so passed is the remainder after both.
+        // the total - so passed is the remainder after both.
         passed: Math.max(0, tests - failed - skipped),
     };
 }

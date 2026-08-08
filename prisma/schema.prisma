@@ -24,7 +24,7 @@ model User {
   passwordHash String?
   createdAt    DateTime @default(now())
   // Authorization role: USER | ADMIN. Admins may author challenges through the
-  // admin UI, which writes code the runner later executes — so the role is
+  // admin UI, which writes code the runner later executes - so the role is
   // read from this column on every admin request rather than trusted from the
   // JWT, which would keep saying ADMIN until it expired after a demotion.
   // A plain String, matching how the other enums in this schema are stored.
@@ -206,7 +206,7 @@ model Challenge {
   // Meta projection of `content["meta.json"]`. These exist so listings can
   // filter/sort in SQL and so PostgresStore can synthesize the registry index
   // in a single query. Rewritten from the tree in the SAME transaction as
-  // `content`, by the one code path that writes — unlike the old index.json
+  // `content`, by the one code path that writes - unlike the old index.json
   // artifact, there is no window in which they can drift.
   title           String
   difficulty      String // Difficulty: easy | medium | hard
@@ -238,7 +238,7 @@ model Challenge {
   // above cascade because they are owned by the challenge; these are not).
   // Sessions, hint reveals and progress rows are a user's record of what they
   // did, including stamped scores. Deleting a challenge should not silently
-  // erase them — and since nothing in the app deletes a Challenge (the admin UI
+  // erase them - and since nothing in the app deletes a Challenge (the admin UI
   // unpublishes by setting status, and there is no DELETE route), the only way
   // to hit this is a manual database operation, which is exactly when a refusal
   // beats a silent cascade.

@@ -43,7 +43,7 @@ export async function runFile(
     entryPath: string,
     handlers: RunFileHandlers = {},
 ): Promise<RunFileResult> {
-    // Same admission gate as runChallenge — a single-file run still spawns a
+    // Same admission gate as runChallenge - a single-file run still spawns a
     // process, so it shares the concurrency budget and can't bypass the cap.
     const release = await runLimiter.acquire({
         signal: handlers.signal,

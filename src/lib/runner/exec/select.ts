@@ -5,8 +5,8 @@ import type { Executor } from "./types";
 /**
  * Choose the executor from `ARENA_RUNNER`:
  *
- *   docker (default) — run suites inside an isolated container.
- *   host             — run in-process on the host. NO isolation; an explicit
+ *   docker (default) - run suites inside an isolated container.
+ *   host             - run in-process on the host. NO isolation; an explicit
  *                      dev/CI escape hatch for when Docker isn't available.
  *                      Never use as the default in a deployed environment.
  */

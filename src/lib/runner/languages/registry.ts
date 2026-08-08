@@ -6,7 +6,7 @@ import { pythonRunner } from "./python";
 /**
  * Runtime → LanguageRunner. Adding a language is a new entry here plus its
  * runner module and image (see MULTI_LANGUAGE_PLAN). go/rust remain declared
- * in the Runtime union but unimplemented — getRunner throws for those.
+ * in the Runtime union but unimplemented - getRunner throws for those.
  */
 const RUNNERS: Partial<Record<Runtime, LanguageRunner>> = {
     node: nodeRunner,

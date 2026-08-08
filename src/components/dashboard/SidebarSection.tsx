@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 /**
  * A titled block for the profile sidebar (e.g. "Languages"). Generic wrapper so
- * new sidebar panels stay visually consistent — heading, optional trailing
+ * new sidebar panels stay visually consistent - heading, optional trailing
  * action, then arbitrary content.
  */
 export function SidebarSection({

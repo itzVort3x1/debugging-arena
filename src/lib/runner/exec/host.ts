@@ -17,7 +17,7 @@ const HOST_CACHE_DIR = path.join(os.tmpdir(), "arena-jest-cache");
  * did: jest and ts-jest resolved from the app's own node_modules, spawned into
  * the sandbox temp dir with the host environment inherited.
  *
- * This inherits `process.env` and has full filesystem/network access — it is
+ * This inherits `process.env` and has full filesystem/network access - it is
  * the INSECURE path, kept only as an explicit dev/CI escape hatch behind
  * `ARENA_RUNNER=host`. Never make it the default in a deployed environment.
  */
@@ -42,7 +42,7 @@ export const hostExecutor: Executor = {
         const { command, sandboxDir, handlers, timeoutMs } = req;
         const proc = spawn(command.cmd, command.args, {
             cwd: sandboxDir,
-            // Host env is inherited here — see the security note above.
+            // Host env is inherited here - see the security note above.
             env: { ...process.env, ...command.env },
         });
         return streamProcess(proc, handlers, timeoutMs, () =>

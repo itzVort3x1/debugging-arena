@@ -1,4 +1,4 @@
-# arena-node — minimal image for running Node/jest challenge suites in isolation.
+# arena-node - minimal image for running Node/jest challenge suites in isolation.
 #
 # The test toolchain (jest, ts-jest, ts-node, typescript) is baked in at a fixed
 # location so the throwaway sandbox mounted at /work needs no node_modules of its
@@ -7,7 +7,7 @@
 FROM node:22-slim
 
 # Install the pinned toolchain into a fixed, discoverable location. The runner's
-# ExecEnv points jest/ts-jest at /opt/arena/node_modules/... — keep in sync.
+# ExecEnv points jest/ts-jest at /opt/arena/node_modules/... - keep in sync.
 WORKDIR /opt/arena
 COPY package.json ./
 RUN npm install --no-audit --no-fund --omit=dev \

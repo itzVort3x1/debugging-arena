@@ -10,7 +10,7 @@ const RESULT_FILE = ".pytest-result.xml";
 /**
  * Minimal pytest config. `pythonpath = .` puts the sandbox root on sys.path so
  * the tests (materialized under tests/) can import the editable module (which
- * is materialized at the sandbox root) — without it, pytest's default import
+ * is materialized at the sandbox root) - without it, pytest's default import
  * mode would only add the tests/ dir.
  */
 const PYTEST_INI = `[pytest]

@@ -2,7 +2,7 @@
 
 Minimal container image for running Python/pytest challenge suites in
 isolation. Selected when a challenge's `meta.runtime` is `python`. Requires
-`ARENA_RUNNER=docker` (the default) — there is no host-mode Python path, since
+`ARENA_RUNNER=docker` (the default) - there is no host-mode Python path, since
 the app's host isn't expected to have pytest installed.
 
 ## Build
@@ -25,11 +25,11 @@ docker run --rm --network=none --cap-drop=ALL --security-opt=no-new-privileges \
   arena-python pytest tests -v --junitxml /work/.pytest-result.xml ...
 ```
 
-- **`/work`** — the materialized sandbox (editable files + read-only `tests/` +
+- **`/work`** - the materialized sandbox (editable files + read-only `tests/` +
   a generated `pytest.ini`), bind-mounted from a host temp dir. pytest writes
   `.pytest-result.xml` here; the host reads it back and parses the JUnit XML
   for scoring (`src/lib/runner/junit.ts`).
-- **`/cache`** — the `arena-python-cache` named volume (one per image).
+- **`/cache`** - the `arena-python-cache` named volume (one per image).
 - The **host environment is not forwarded**.
 
 ## Sandbox import path
